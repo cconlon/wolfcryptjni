@@ -15,6 +15,15 @@ on:
       wolfssl_configure:
         required: true
         type: string
+      wolfcryptjni_cflags:
+        required: false
+        type: string
+      wolfcryptjni_ldflags:
+        required: false
+        type: string
+      preload_libasan:
+        required: false
+        type: boolean
 
 jobs:
   build_wolfcryptjni:
@@ -64,7 +73,18 @@ jobs:
         shell: bash
 
       - name: Build JNI library
-        run: PREFIX=$GITHUB_WORKSPACE/build-dir make
+        run: PREFIX=$GITHUB_WORKSPACE/build-dir CCFLAGS="${{ inputs.wolfcryptjni_cflags }}" LDFLAGS="${{ inputs.wolfcryptjni_ldflags }}" make
+
+      - name: Get gcc libasan.so path
+        if: ${{ inputs.preload_libasan }}
+        run: |
+          echo "LIBASAN_PATH=$(gcc -print-file-name=libasan.so)" >> "$GITHUB_ENV"
+
+      - name: Preload libasan.so
+        if: ${{ inputs.preload_libasan }}
+        run: |
+          echo "LD_PRELOAD=$LIBASAN_PATH" >> "$GITHUB_ENV"
+
 
       # ant build-jni-debug
       - name: Build jce-debug JAR (ant build-jni-debug)
