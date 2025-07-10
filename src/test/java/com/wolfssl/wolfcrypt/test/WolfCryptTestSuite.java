@@ -34,6 +34,7 @@ import org.junit.runners.Suite.SuiteClasses;
     AesGcmTest.class,
     AesCcmTest.class,
     AesCmacTest.class,
+    AesGmacTest.class,
     Des3Test.class,
     ChachaTest.class,
     Md5Test.class,
