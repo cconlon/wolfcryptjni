@@ -67,10 +67,15 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_AesGcm_wc_1AesInit
     int ret = 0;
     Aes* aes = NULL;
     (void)this;
-    
+
     aes = (Aes*) getNativeStruct(env, this);
     if ((*env)->ExceptionOccurred(env)) {
         /* getNativeStruct may throw exception, if so stop and return */
+        return;
+    }
+
+    if (aes == NULL) {
+        throwWolfCryptException(env, "AES object is null");
         return;
     }
 
@@ -92,7 +97,7 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_AesGcm_wc_1AesFree
 #ifndef NO_AES
     Aes* aes = NULL;
     (void)this;
-    
+
     aes = (Aes*) getNativeStruct(env, this);
     if ((*env)->ExceptionOccurred(env)) {
         /* getNativeStruct may throw exception, if so stop and return */
@@ -129,6 +134,11 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_AesGcm_wc_1AesGcmSetKey
     }
 
     if (key == NULL || keyLen == 0) {
+        ret = BAD_FUNC_ARG;
+    }
+    else if (keyLen != AES_128_KEY_SIZE && keyLen != AES_192_KEY_SIZE &&
+             keyLen != AES_256_KEY_SIZE) {
+        /* AES-GCM key must be 16, 24, or 32 bytes */
         ret = BAD_FUNC_ARG;
     }
 
@@ -197,6 +207,10 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_AesGcm_wc_1AesGcmEncrypt
         authTag == NULL || authTagSz == 0) {
         ret = BAD_FUNC_ARG;
     }
+    else if (authTagSz < WOLFSSL_MIN_AUTH_TAG_SZ || authTagSz > AES_BLOCK_SIZE) {
+        /* Auth tag must be between 12-16 bytes for AES-GCM */
+        ret = BAD_FUNC_ARG;
+    }
 
     /* Allocate new buffer to hold ciphertext */
     if (ret == 0) {
@@ -218,7 +232,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_AesGcm_wc_1AesGcmEncrypt
     if (ret == 0) {
         outArr = (*env)->NewByteArray(env, inLen);
         if (outArr == NULL) {
-            ret = MEMORY_E; 
+            ret = MEMORY_E;
         }
         else {
             (*env)->SetByteArrayRegion(env, outArr, 0, inLen, (jbyte*)out);
@@ -259,6 +273,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_AesGcm_wc_1AesGcmEncrypt
     }
 
     if (out != NULL) {
+        XMEMSET(out, 0, inLen);
         XFREE(out, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     }
 
@@ -275,10 +290,10 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_AesGcm_wc_1AesGcmEncrypt
 
 #else
     (void)this;
-    (void)input;
-    (void)iv;
-    (void)authTag;
-    (void)authIn;
+    (void)inputArr;
+    (void)ivArr;
+    (void)authTagArr;
+    (void)authInArr;
     throwNotCompiledInException(env);
     return NULL;
 #endif
@@ -329,6 +344,10 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_AesGcm_wc_1AesGcmDecrypt
         authTag == NULL || authTagSz == 0) {
         ret = BAD_FUNC_ARG;
     }
+    else if (authTagSz < WOLFSSL_MIN_AUTH_TAG_SZ || authTagSz > AES_BLOCK_SIZE) {
+        /* Auth tag must be between 12-16 bytes for AES-GCM */
+        ret = BAD_FUNC_ARG;
+    }
 
     if (ret == 0) {
         out = (byte*)XMALLOC(inLen, NULL, DYNAMIC_TYPE_TMP_BUFFER);
@@ -349,7 +368,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_AesGcm_wc_1AesGcmDecrypt
     if (ret == 0) {
         outArr = (*env)->NewByteArray(env, inLen);
         if (outArr == NULL) {
-            ret = MEMORY_E; 
+            ret = MEMORY_E;
         }
         else {
             (*env)->SetByteArrayRegion(env, outArr, 0, inLen, (jbyte*)out);
@@ -398,10 +417,10 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_AesGcm_wc_1AesGcmDecrypt
 
 #else
     (void)this;
-    (void)input;
-    (void)iv;
-    (void)authTag;
-    (void)authIn;
+    (void)inputArr;
+    (void)ivArr;
+    (void)authTagArr;
+    (void)authInArr;
     throwNotCompiledInException(env);
     return NULL;
 #endif
