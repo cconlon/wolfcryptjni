@@ -132,7 +132,7 @@ Java_com_wolfssl_wolfcrypt_Ecc_wc_1ecc_1make_1key(
         return;
     }
 
-    if (ecc == NULL || rng == NULL) {
+    if (ecc == NULL || rng == NULL || size <= 0) {
         ret = BAD_FUNC_ARG;
     }
     else {
@@ -258,7 +258,7 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Ecc_wc_1ecc_1import_1private
     pubSz  = getByteArrayLength(env, pub_object);
 
     /* pub may be null if only importing private key */
-    if (ecc == NULL || priv == NULL) {
+    if (ecc == NULL || priv == NULL || privSz == 0) {
         ret = BAD_FUNC_ARG;
     }
 
@@ -333,7 +333,7 @@ Java_com_wolfssl_wolfcrypt_Ecc_wc_1ecc_1export_1private(
             ret = MEMORY_E;
         }
         else {
-            XMEMSET(output, 0, sizeof(outputSz));
+            XMEMSET(output, 0, outputSz);
         }
     }
 
@@ -1080,6 +1080,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_Ecc_wc_1ecc_1private_1ke
         if (ret == LENGTH_ONLY_E) {
             ret = 0;
         }
+
+        /* save original pkcs8Sz for zeroization later */
+        pkcs8BufSz = pkcs8Sz;
 
         pkcs8 = (byte*)XMALLOC(pkcs8Sz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
         if (pkcs8 == NULL) {
