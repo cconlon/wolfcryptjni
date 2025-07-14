@@ -79,9 +79,27 @@ Java_com_wolfssl_wolfcrypt_Des3_native_1set_1key_1internal(
     key = getByteArray(env, key_object);
     iv  = getByteArray(env, iv_object);
 
-    ret = (!des || !key) /* iv is optional */
-        ? BAD_FUNC_ARG
-        : wc_Des3_SetKey(des, key, iv, opmode);
+    if (!des || !key) {
+        ret = BAD_FUNC_ARG;
+    }
+    else {
+        word32 keySz = getByteArrayLength(env, key_object);
+        /* DES3 key must be 24 bytes */
+        if (keySz != DES3_KEY_SIZE) {
+            ret = BAD_FUNC_ARG;
+        }
+        else if (iv != NULL) {
+            word32 ivSz = getByteArrayLength(env, iv_object);
+            /* DES3 IV must be 8 bytes if provided */
+            if (ivSz != DES_IV_SIZE) {
+                ret = BAD_FUNC_ARG;
+            }
+        }
+    }
+
+    if (ret == 0) {
+        ret = wc_Des3_SetKey(des, key, iv, opmode);
+    }
 
     if (ret != 0)
         throwWolfCryptExceptionFromError(env, ret);
@@ -130,6 +148,9 @@ Java_com_wolfssl_wolfcrypt_Des3_native_1update_1internal__I_3BII_3BI(
     else if ((word32)(outputOffset + length) >
              getByteArrayLength(env, output_object)) {
         ret = BUFFER_E; /* buffer overflow check */
+    }
+    else if (length % DES_BLOCK_SIZE != 0) {
+        ret = BAD_FUNC_ARG; /* DES3 CBC requires block-aligned input */
     }
     else if (opmode == DES_ENCRYPTION) {
         ret = wc_Des3_CbcEncrypt(des, output+outputOffset,input+offset, length);
@@ -198,12 +219,20 @@ Java_com_wolfssl_wolfcrypt_Des3_native_1update_1internal__ILjava_nio_ByteBuffer_
              getDirectBufferLimit(env, output_object)) {
         ret = BUFFER_E; /* buffer overflow check */
     }
+    else if (outputOffset < 0) {
+        ret = BAD_FUNC_ARG; /* signed sanitizers */
+    }
+    else if (length % DES_BLOCK_SIZE != 0) {
+        ret = BAD_FUNC_ARG; /* DES3 CBC requires block-aligned input */
+    }
     else if (opmode == DES_ENCRYPTION) {
-        ret = wc_Des3_CbcEncrypt(des, output, input + offset, length);
+        ret = wc_Des3_CbcEncrypt(des, output + outputOffset,
+            input + offset, length);
         LogStr("wc_Des3CbcEncrypt(des=%p, out, in, inSz) = %d\n", des, ret);
     }
     else {
-        ret = wc_Des3_CbcDecrypt(des, output, input + offset, length);
+        ret = wc_Des3_CbcDecrypt(des, output + outputOffset,
+            input + offset, length);
         LogStr("wc_Des3CbcDecrypt(des=%p, out, in, inSz) = %d\n", des, ret);
     }
 
@@ -217,8 +246,8 @@ Java_com_wolfssl_wolfcrypt_Des3_native_1update_1internal__ILjava_nio_ByteBuffer_
 
     LogStr("input[%u]: [%p]\n", (word32)length, input + offset);
     LogHex((byte*) input, offset, length);
-    LogStr("output[%u]: [%p]\n", (word32)length, output);
-    LogHex((byte*) output, 0, length);
+    LogStr("output[%u]: [%p]\n", (word32)length, output + outputOffset);
+    LogHex((byte*) output, outputOffset, length);
 #else
     throwNotCompiledInException(env);
 #endif
