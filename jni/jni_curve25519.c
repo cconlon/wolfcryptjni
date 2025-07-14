@@ -134,9 +134,16 @@ Java_com_wolfssl_wolfcrypt_Curve25519_wc_1curve25519_1make_1key(
         return;
     }
 
-    ret = (!curve25519 || !rng)
-        ? BAD_FUNC_ARG
-        : wc_curve25519_make_key(rng, size, curve25519);
+    if (!curve25519 || !rng) {
+        ret = BAD_FUNC_ARG;
+    }
+    else if (size != CURVE25519_KEYSIZE) {
+        /* Curve25519 key size must be 32 bytes */
+        ret = BAD_FUNC_ARG;
+    }
+    else {
+        ret = wc_curve25519_make_key(rng, size, curve25519);
+    }
 
     if (ret != 0)
         throwWolfCryptExceptionFromError(env, ret);
@@ -171,7 +178,16 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Curve25519_wc_1curve25519_1imp
     /* pub may be null if only importing private key */
     if (!curve25519 || !priv) {
         ret = BAD_FUNC_ARG;
-    } else {
+    }
+    else if (privSz != CURVE25519_KEYSIZE) {
+        /* Curve25519 private key must be 32 bytes */
+        ret = BAD_FUNC_ARG;
+    }
+    else if (pub && pubSz != CURVE25519_KEYSIZE) {
+        /* Curve25519 public key must be 32 bytes if provided */
+        ret = BAD_FUNC_ARG;
+    }
+    else {
         /* detect, and later skip, leading zero byte */
         ret = wc_curve25519_import_private_raw(priv, privSz, pub,
                                                pubSz, curve25519);
@@ -189,7 +205,7 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Curve25519_wc_1curve25519_1imp
 #endif
 }
 
-    JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Curve25519_wc_1curve25519_1import_1private_1only
+JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Curve25519_wc_1curve25519_1import_1private_1only
   (JNIEnv* env, jobject this, jbyteArray priv_object)
 {
 #if defined(HAVE_CURVE25519) && defined(HAVE_CURVE25519_KEY_IMPORT)
@@ -209,7 +225,12 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Curve25519_wc_1curve25519_1imp
     /* pub may be null if only importing private key */
     if (!curve25519 || !priv) {
         ret = BAD_FUNC_ARG;
-    } else {
+    }
+    else if (privSz != CURVE25519_KEYSIZE) {
+        /* Curve25519 private key must be 32 bytes */
+        ret = BAD_FUNC_ARG;
+    }
+    else {
         /* detect, and later skip, leading zero byte */
         ret = wc_curve25519_import_private(priv, privSz, curve25519);
     }
@@ -244,7 +265,12 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Curve25519_wc_1curve25519_1imp
 
     if (!curve25519 || !pub) {
         ret = BAD_FUNC_ARG;
-    } else {
+    }
+    else if (pubSz != CURVE25519_KEYSIZE) {
+        /* Curve25519 public key must be 32 bytes */
+        ret = BAD_FUNC_ARG;
+    }
+    else {
         /* detect, and later skip, leading zero byte */
         ret = wc_curve25519_import_public(pub, pubSz, curve25519);
     }
