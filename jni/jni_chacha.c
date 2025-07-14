@@ -81,6 +81,13 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Chacha_wc_1Chacha_1setIV
     if (chacha == NULL || iv == NULL) {
         ret = BAD_FUNC_ARG;
     }
+    else {
+        /* ChaCha IV should be 12 bytes (96 bits) */
+        word32 ivSz = getByteArrayLength(env, iv_object);
+        if (ivSz != CHACHA_IV_BYTES) {
+            ret = BAD_FUNC_ARG;
+        }
+    }
 
     if (ret == 0) {
         ret = wc_Chacha_SetIV(chacha, iv, 0);
@@ -116,6 +123,12 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Chacha_wc_1Chacha_1setKey
 
     if (chacha == NULL || key == NULL) {
         ret = BAD_FUNC_ARG;
+    }
+    else {
+        /* ChaCha key should be 16 bytes (128 bits) or 32 bytes (256 bits) */
+        if (keySz != 16 && keySz != CHACHA_MAX_KEY_SZ) {
+            ret = BAD_FUNC_ARG;
+        }
     }
 
     if (ret == 0) {
@@ -162,7 +175,8 @@ Java_com_wolfssl_wolfcrypt_Chacha_wc_1Chacha_1process(
     if (ret == 0) {
         output = (byte*)XMALLOC(inputSz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
         if (output == NULL) {
-            throwOutOfMemoryException(env, "Failed to allocate key buffer");
+            throwOutOfMemoryException(env, "Failed to allocate output buffer");
+            releaseByteArray(env, input_obj, input, JNI_ABORT);
             return result;
         }
     }
@@ -189,6 +203,7 @@ Java_com_wolfssl_wolfcrypt_Chacha_wc_1Chacha_1process(
 
     LogStr("wc_Chacha_Process(): output = %p, ret = %d\n", output, ret);
     XFREE(output, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    releaseByteArray(env, input_obj, input, JNI_ABORT);
 #else
     throwNotCompiledInException(env);
 #endif
