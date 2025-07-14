@@ -133,9 +133,16 @@ Java_com_wolfssl_wolfcrypt_Ed25519_wc_1ed25519_1make_1key(
         return;
     }
 
-    ret = (!ed25519 || !rng)
-        ? BAD_FUNC_ARG
-        : wc_ed25519_make_key(rng, size, ed25519);
+    if (!ed25519 || !rng) {
+        ret = BAD_FUNC_ARG;
+    }
+    else if (size != ED25519_KEY_SIZE) {
+        /* Ed25519 key size must be 32 bytes */
+        ret = BAD_FUNC_ARG;
+    }
+    else {
+        ret = wc_ed25519_make_key(rng, size, ed25519);
+    }
 
     if (ret != 0)
         throwWolfCryptExceptionFromError(env, ret);
@@ -195,7 +202,16 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Ed25519_wc_1ed25519_1import_1p
     /* pub may be null if only importing private key */
     if (!ed25519 || !priv) {
         ret = BAD_FUNC_ARG;
-    } else {
+    }
+    else if (privSz != ED25519_KEY_SIZE) {
+        /* Ed25519 private key must be 32 bytes */
+        ret = BAD_FUNC_ARG;
+    }
+    else if (pub && pubSz != ED25519_PUB_KEY_SIZE) {
+        /* Ed25519 public key must be 32 bytes if provided */
+        ret = BAD_FUNC_ARG;
+    }
+    else {
         /* detect, and later skip, leading zero byte */
         if (!pub)
             ret = wc_ed25519_import_private_only(priv, privSz, ed25519);
@@ -235,7 +251,12 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Ed25519_wc_1ed25519_1import_1p
 
     if (!ed25519 || !pub) {
         ret = BAD_FUNC_ARG;
-    } else {
+    }
+    else if (pubSz != ED25519_PUB_KEY_SIZE) {
+        /* Ed25519 public key must be 32 bytes */
+        ret = BAD_FUNC_ARG;
+    }
+    else {
         ret = wc_ed25519_import_public(pub, pubSz, ed25519);
     }
 
@@ -269,7 +290,12 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Ed25519_wc_1ed25519_1import_1p
 
     if (!ed25519 || !priv) {
         ret = BAD_FUNC_ARG;
-    } else {
+    }
+    else if (privSz != ED25519_KEY_SIZE) {
+        /* Ed25519 private key must be 32 bytes */
+        ret = BAD_FUNC_ARG;
+    }
+    else {
         /* detect, and later skip, leading zero byte */
         ret = wc_ed25519_import_private_only(priv, privSz, ed25519);
     }
@@ -504,7 +530,6 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_Ed25519_wc_1ed25519_1sig
     }
 
     LogStr("wc_ed25519_sign_msg(ed25519=%p) = %d\n", ed25519, ret);
-    printf("wc_ed25519_sign_msg(ed25519=%p) = %d\n", ed25519, ret);
     XFREE(output, NULL, DYNAMIC_TYPE_TMP_BUFFER);
 
     releaseByteArray(env, msg_in, msg, JNI_ABORT);
@@ -535,11 +560,16 @@ JNIEXPORT jboolean JNICALL Java_com_wolfssl_wolfcrypt_Ed25519_wc_1ed25519_1verif
     sig = getByteArray(env, sig_in);
     msg = getByteArray(env, msg_in);
     msglen = getByteArrayLength(env, msg_in);
-    siglen = getByteArrayLength(env, msg_in);
+    siglen = getByteArrayLength(env, sig_in);
 
-    if (!ed25519) {
+    if (!ed25519 || !sig || !msg) {
         ret = BAD_FUNC_ARG;
-    } else {
+    }
+    else if (siglen != ED25519_SIG_SIZE) {
+        /* Ed25519 signature must be 64 bytes */
+        ret = BAD_FUNC_ARG;
+    }
+    else {
         ret = wc_ed25519_verify_msg(sig, siglen, msg, msglen, &result, ed25519);
     }
 
