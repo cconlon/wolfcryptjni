@@ -178,14 +178,23 @@ The JCE provider currently supports the following algorithms:
 
     SecretKeyFactory
         PBKDF2WithHmacSHA1
+            Aliases: PBEWithHmacSHA1, PBKDF2WithHmacSHA-1
         PBKDF2WithHmacSHA224
+            Aliases: PBEWithHmacSHA224, PBKDF2WithHmacSHA-224
         PBKDF2WithHmacSHA256
+            Aliases: PBEWithHmacSHA256, PBKDF2WithHmacSHA-256
         PBKDF2WithHmacSHA384
+            Aliases: PBEWithHmacSHA384, PBKDF2WithHmacSHA-384
         PBKDF2WithHmacSHA512
+            Aliases: PBEWithHmacSHA512, PBKDF2WithHmacSHA-512
         PBKDF2WithHmacSHA3-224
+            Aliases: PBEWithHmacSHA3-224
         PBKDF2WithHmacSHA3-256
+            Aliases: PBEWithHmacSHA3-256
         PBKDF2WithHmacSHA3-384
+            Aliases: PBEWithHmacSHA3-384
         PBKDF2WithHmacSHA3-512
+            Aliases: PBEWithHmacSHA3-512
 
     KeyStore
         WKS

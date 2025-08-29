@@ -391,38 +391,61 @@ public final class WolfCryptProvider extends Provider {
             if (FeatureDetect.HmacShaEnabled()) {
                 put("SecretKeyFactory.PBKDF2WithHmacSHA1",
                     "com.wolfssl.provider.jce.WolfCryptSecretKeyFactory$wcPBKDF2WithHmacSHA1");
+                /* Legacy aliases for PBKDF2WithHmacSHA1 */
+                put("Alg.Alias.SecretKeyFactory.PBEWithHmacSHA1", "PBKDF2WithHmacSHA1");
+                put("Alg.Alias.SecretKeyFactory.PBKDF2WithHmacSHA-1", "PBKDF2WithHmacSHA1");
             }
             if (FeatureDetect.HmacSha224Enabled()) {
                 put("SecretKeyFactory.PBKDF2WithHmacSHA224",
                     "com.wolfssl.provider.jce.WolfCryptSecretKeyFactory$wcPBKDF2WithHmacSHA224");
+                /* Legacy aliases for PBKDF2WithHmacSHA224 */
+                put("Alg.Alias.SecretKeyFactory.PBEWithHmacSHA224", "PBKDF2WithHmacSHA224");
+                put("Alg.Alias.SecretKeyFactory.PBKDF2WithHmacSHA-224", "PBKDF2WithHmacSHA224");
             }
             if (FeatureDetect.HmacSha256Enabled()) {
                 put("SecretKeyFactory.PBKDF2WithHmacSHA256",
                     "com.wolfssl.provider.jce.WolfCryptSecretKeyFactory$wcPBKDF2WithHmacSHA256");
+                /* Legacy aliases for PBKDF2WithHmacSHA256 */
+                put("Alg.Alias.SecretKeyFactory.PBEWithHmacSHA256", "PBKDF2WithHmacSHA256");
+                put("Alg.Alias.SecretKeyFactory.PBKDF2WithHmacSHA-256", "PBKDF2WithHmacSHA256");
             }
             if (FeatureDetect.HmacSha384Enabled()) {
                 put("SecretKeyFactory.PBKDF2WithHmacSHA384",
                     "com.wolfssl.provider.jce.WolfCryptSecretKeyFactory$wcPBKDF2WithHmacSHA384");
+                /* Legacy aliases for PBKDF2WithHmacSHA384 */
+                put("Alg.Alias.SecretKeyFactory.PBEWithHmacSHA384", "PBKDF2WithHmacSHA384");
+                put("Alg.Alias.SecretKeyFactory.PBKDF2WithHmacSHA-384", "PBKDF2WithHmacSHA384");
             }
             if (FeatureDetect.HmacSha512Enabled()) {
                 put("SecretKeyFactory.PBKDF2WithHmacSHA512",
                     "com.wolfssl.provider.jce.WolfCryptSecretKeyFactory$wcPBKDF2WithHmacSHA512");
+                /* Legacy aliases for PBKDF2WithHmacSHA512 */
+                put("Alg.Alias.SecretKeyFactory.PBEWithHmacSHA512", "PBKDF2WithHmacSHA512");
+                put("Alg.Alias.SecretKeyFactory.PBKDF2WithHmacSHA-512", "PBKDF2WithHmacSHA512");
             }
             if (FeatureDetect.HmacSha3_224Enabled()) {
                 put("SecretKeyFactory.PBKDF2WithHmacSHA3-224",
                     "com.wolfssl.provider.jce.WolfCryptSecretKeyFactory$wcPBKDF2WithHmacSHA3_224");
+                /* Legacy alias for PBKDF2WithHmacSHA3-224 */
+                put("Alg.Alias.SecretKeyFactory.PBEWithHmacSHA3-224", "PBKDF2WithHmacSHA3-224");
             }
             if (FeatureDetect.HmacSha3_256Enabled()) {
                 put("SecretKeyFactory.PBKDF2WithHmacSHA3-256",
                     "com.wolfssl.provider.jce.WolfCryptSecretKeyFactory$wcPBKDF2WithHmacSHA3_256");
+                /* Legacy alias for PBKDF2WithHmacSHA3-256 */
+                put("Alg.Alias.SecretKeyFactory.PBEWithHmacSHA3-256", "PBKDF2WithHmacSHA3-256");
             }
             if (FeatureDetect.HmacSha3_384Enabled()) {
                 put("SecretKeyFactory.PBKDF2WithHmacSHA3-384",
                     "com.wolfssl.provider.jce.WolfCryptSecretKeyFactory$wcPBKDF2WithHmacSHA3_384");
+                /* Legacy alias for PBKDF2WithHmacSHA3-384 */
+                put("Alg.Alias.SecretKeyFactory.PBEWithHmacSHA3-384", "PBKDF2WithHmacSHA3-384");
             }
             if (FeatureDetect.HmacSha3_512Enabled()) {
                 put("SecretKeyFactory.PBKDF2WithHmacSHA3-512",
                     "com.wolfssl.provider.jce.WolfCryptSecretKeyFactory$wcPBKDF2WithHmacSHA3_512");
+                /* Legacy alias for PBKDF2WithHmacSHA3-512 */
+                put("Alg.Alias.SecretKeyFactory.PBEWithHmacSHA3-512", "PBKDF2WithHmacSHA3-512");
             }
         }
 

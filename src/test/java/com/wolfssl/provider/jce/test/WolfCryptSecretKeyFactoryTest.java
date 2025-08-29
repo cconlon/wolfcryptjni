@@ -985,6 +985,240 @@ public class WolfCryptSecretKeyFactoryTest {
     }
 
     /**
+     * Test legacy aliases for PBKDF2 SecretKeyFactory algorithms.
+     * These tests verify that legacy names map to the correct algorithms.
+     */
+    @Test
+    public void testPBKDF2LegacyAliases()
+        throws NoSuchAlgorithmException, InvalidKeySpecException,
+               NoSuchProviderException {
+
+        char[] pass = "passwordpassword".toCharArray();
+        byte[] salt = {
+            (byte)0x78, (byte)0x57, (byte)0x8E, (byte)0x5a,
+            (byte)0x5d, (byte)0x63, (byte)0xcb, (byte)0x06
+        };
+        int iterations = 2048;
+        int kLen = 192;
+        PBEKeySpec spec = new PBEKeySpec(pass, salt, iterations, kLen);
+        SecretKeyFactory sf = null;
+        SecretKey key = null;
+        byte[] result = null;
+        byte[] expectedResult = null;
+
+        /* Test PBEWithHmacSHA1 alias */
+        if (FeatureDetect.Pbkdf2Enabled() &&
+            FeatureDetect.HmacShaEnabled()) {
+
+            /* Get expected result from canonical name */
+            sf = SecretKeyFactory.getInstance(
+                    "PBKDF2WithHmacSHA1", provider);
+            key = sf.generateSecret(spec);
+            expectedResult = key.getEncoded();
+
+            /* Test PBEWithHmacSHA1 alias */
+            sf = SecretKeyFactory.getInstance(
+                    "PBEWithHmacSHA1", provider);
+            key = sf.generateSecret(spec);
+            result = key.getEncoded();
+            assertNotNull(result);
+            assertTrue(Arrays.equals(result, expectedResult));
+
+            /* Test PBKDF2WithHmacSHA-1 alias */
+            sf = SecretKeyFactory.getInstance(
+                    "PBKDF2WithHmacSHA-1", provider);
+            key = sf.generateSecret(spec);
+            result = key.getEncoded();
+            assertNotNull(result);
+            assertTrue(Arrays.equals(result, expectedResult));
+        }
+
+        /* Test PBEWithHmacSHA224 alias */
+        if (FeatureDetect.Pbkdf2Enabled() &&
+            FeatureDetect.HmacSha224Enabled()) {
+
+            /* Get expected result from canonical name */
+            sf = SecretKeyFactory.getInstance(
+                    "PBKDF2WithHmacSHA224", provider);
+            key = sf.generateSecret(spec);
+            expectedResult = key.getEncoded();
+
+            /* Test PBEWithHmacSHA224 alias */
+            sf = SecretKeyFactory.getInstance(
+                    "PBEWithHmacSHA224", provider);
+            key = sf.generateSecret(spec);
+            result = key.getEncoded();
+            assertNotNull(result);
+            assertTrue(Arrays.equals(result, expectedResult));
+
+            /* Test PBKDF2WithHmacSHA-224 alias */
+            sf = SecretKeyFactory.getInstance(
+                    "PBKDF2WithHmacSHA-224", provider);
+            key = sf.generateSecret(spec);
+            result = key.getEncoded();
+            assertNotNull(result);
+            assertTrue(Arrays.equals(result, expectedResult));
+        }
+
+        /* Test PBEWithHmacSHA256 alias */
+        if (FeatureDetect.Pbkdf2Enabled() &&
+            FeatureDetect.HmacSha256Enabled()) {
+
+            /* Get expected result from canonical name */
+            sf = SecretKeyFactory.getInstance(
+                    "PBKDF2WithHmacSHA256", provider);
+            key = sf.generateSecret(spec);
+            expectedResult = key.getEncoded();
+
+            /* Test PBEWithHmacSHA256 alias */
+            sf = SecretKeyFactory.getInstance(
+                    "PBEWithHmacSHA256", provider);
+            key = sf.generateSecret(spec);
+            result = key.getEncoded();
+            assertNotNull(result);
+            assertTrue(Arrays.equals(result, expectedResult));
+
+            /* Test PBKDF2WithHmacSHA-256 alias */
+            sf = SecretKeyFactory.getInstance(
+                    "PBKDF2WithHmacSHA-256", provider);
+            key = sf.generateSecret(spec);
+            result = key.getEncoded();
+            assertNotNull(result);
+            assertTrue(Arrays.equals(result, expectedResult));
+        }
+
+        /* Test PBEWithHmacSHA384 alias */
+        if (FeatureDetect.Pbkdf2Enabled() &&
+            FeatureDetect.HmacSha384Enabled()) {
+
+            /* Get expected result from canonical name */
+            sf = SecretKeyFactory.getInstance(
+                    "PBKDF2WithHmacSHA384", provider);
+            key = sf.generateSecret(spec);
+            expectedResult = key.getEncoded();
+
+            /* Test PBEWithHmacSHA384 alias */
+            sf = SecretKeyFactory.getInstance(
+                    "PBEWithHmacSHA384", provider);
+            key = sf.generateSecret(spec);
+            result = key.getEncoded();
+            assertNotNull(result);
+            assertTrue(Arrays.equals(result, expectedResult));
+
+            /* Test PBKDF2WithHmacSHA-384 alias */
+            sf = SecretKeyFactory.getInstance(
+                    "PBKDF2WithHmacSHA-384", provider);
+            key = sf.generateSecret(spec);
+            result = key.getEncoded();
+            assertNotNull(result);
+            assertTrue(Arrays.equals(result, expectedResult));
+        }
+
+        /* Test PBEWithHmacSHA512 alias */
+        if (FeatureDetect.Pbkdf2Enabled() &&
+            FeatureDetect.HmacSha512Enabled()) {
+
+            /* Get expected result from canonical name */
+            sf = SecretKeyFactory.getInstance(
+                    "PBKDF2WithHmacSHA512", provider);
+            key = sf.generateSecret(spec);
+            expectedResult = key.getEncoded();
+
+            /* Test PBEWithHmacSHA512 alias */
+            sf = SecretKeyFactory.getInstance(
+                    "PBEWithHmacSHA512", provider);
+            key = sf.generateSecret(spec);
+            result = key.getEncoded();
+            assertNotNull(result);
+            assertTrue(Arrays.equals(result, expectedResult));
+
+            /* Test PBKDF2WithHmacSHA-512 alias */
+            sf = SecretKeyFactory.getInstance(
+                    "PBKDF2WithHmacSHA-512", provider);
+            key = sf.generateSecret(spec);
+            result = key.getEncoded();
+            assertNotNull(result);
+            assertTrue(Arrays.equals(result, expectedResult));
+        }
+
+        /* Test PBEWithHmacSHA3-224 alias */
+        if (FeatureDetect.Pbkdf2Enabled() &&
+            FeatureDetect.HmacSha3_224Enabled()) {
+
+            /* Get expected result from canonical name */
+            sf = SecretKeyFactory.getInstance(
+                    "PBKDF2WithHmacSHA3-224", provider);
+            key = sf.generateSecret(spec);
+            expectedResult = key.getEncoded();
+
+            /* Test PBEWithHmacSHA3-224 alias */
+            sf = SecretKeyFactory.getInstance(
+                    "PBEWithHmacSHA3-224", provider);
+            key = sf.generateSecret(spec);
+            result = key.getEncoded();
+            assertNotNull(result);
+            assertTrue(Arrays.equals(result, expectedResult));
+        }
+
+        /* Test PBEWithHmacSHA3-256 alias */
+        if (FeatureDetect.Pbkdf2Enabled() &&
+            FeatureDetect.HmacSha3_256Enabled()) {
+
+            /* Get expected result from canonical name */
+            sf = SecretKeyFactory.getInstance(
+                    "PBKDF2WithHmacSHA3-256", provider);
+            key = sf.generateSecret(spec);
+            expectedResult = key.getEncoded();
+
+            /* Test PBEWithHmacSHA3-256 alias */
+            sf = SecretKeyFactory.getInstance(
+                    "PBEWithHmacSHA3-256", provider);
+            key = sf.generateSecret(spec);
+            result = key.getEncoded();
+            assertNotNull(result);
+            assertTrue(Arrays.equals(result, expectedResult));
+        }
+
+        /* Test PBEWithHmacSHA3-384 alias */
+        if (FeatureDetect.Pbkdf2Enabled() &&
+            FeatureDetect.HmacSha3_384Enabled()) {
+
+            /* Get expected result from canonical name */
+            sf = SecretKeyFactory.getInstance(
+                    "PBKDF2WithHmacSHA3-384", provider);
+            key = sf.generateSecret(spec);
+            expectedResult = key.getEncoded();
+
+            /* Test PBEWithHmacSHA3-384 alias */
+            sf = SecretKeyFactory.getInstance(
+                    "PBEWithHmacSHA3-384", provider);
+            key = sf.generateSecret(spec);
+            result = key.getEncoded();
+            assertNotNull(result);
+            assertTrue(Arrays.equals(result, expectedResult));
+        }
+
+        /* Test PBEWithHmacSHA3-512 alias */
+        if (FeatureDetect.Pbkdf2Enabled() &&
+            FeatureDetect.HmacSha3_512Enabled()) {
+
+            /* Get expected result from canonical name */
+            sf = SecretKeyFactory.getInstance(
+                    "PBKDF2WithHmacSHA3-512", provider);
+            key = sf.generateSecret(spec);
+            expectedResult = key.getEncoded();
+
+            /* Test PBEWithHmacSHA3-512 alias */
+            sf = SecretKeyFactory.getInstance(
+                    "PBEWithHmacSHA3-512", provider);
+            key = sf.generateSecret(spec);
+            result = key.getEncoded();
+            assertNotNull(result);
+            assertTrue(Arrays.equals(result, expectedResult));
+        }
+    }
+
+    /**
      * Test creating SecretKeyFactory/KeySpec in parallel across multiple
      * threads, with each one calling generateSecret().
      */
