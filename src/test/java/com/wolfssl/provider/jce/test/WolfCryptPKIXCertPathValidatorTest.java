@@ -1674,5 +1674,57 @@ public class WolfCryptPKIXCertPathValidatorTest {
             }
         }
     }
+
+    /**
+     * Test that zero-length cert paths are valid per RFC 5280. This occurs
+     * when CertPathBuilder determines the trust anchor itself is the target.
+     */
+    @Test
+    public void testZeroLengthCertPath()
+        throws CertificateException, NoSuchAlgorithmException,
+               InvalidAlgorithmParameterException, CertPathValidatorException,
+               NoSuchProviderException {
+
+        FileInputStream fis = null;
+        X509Certificate caCert = null;
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+
+        /* Use CA cert from examples as trust anchor */
+        try {
+            fis = new FileInputStream(caCertDer);
+            caCert = (X509Certificate)cf.generateCertificate(fis);
+            fis.close();
+        } catch (Exception e) {
+            fail("Failed to load CA cert: " + e.getMessage());
+        }
+
+        /* Create trust anchor from CA cert */
+        TrustAnchor anchor = new TrustAnchor(caCert, null);
+        Set<TrustAnchor> anchors = new HashSet<>();
+        anchors.add(anchor);
+
+        /* Create empty cert path (zero-length) */
+        List<Certificate> emptyCertList = new ArrayList<>();
+        CertPath emptyPath = cf.generateCertPath(emptyCertList);
+        assertEquals(0, emptyPath.getCertificates().size());
+
+        /* Create PKIXParameters with the trust anchor */
+        PKIXParameters params = new PKIXParameters(anchors);
+        params.setRevocationEnabled(false);
+
+        /* Validate zero-length path - should succeed */
+        CertPathValidator cpv =
+            CertPathValidator.getInstance("PKIX", provider);
+        PKIXCertPathValidatorResult result =
+            (PKIXCertPathValidatorResult)cpv.validate(emptyPath, params);
+
+        /* Verify result contains trust anchor and its public key */
+        assertNotNull(result);
+        assertNotNull(result.getTrustAnchor());
+        assertEquals(anchor.getTrustedCert(),
+            result.getTrustAnchor().getTrustedCert());
+        assertNotNull(result.getPublicKey());
+        assertEquals(caCert.getPublicKey(), result.getPublicKey());
+    }
 }
 
