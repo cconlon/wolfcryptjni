@@ -1809,6 +1809,49 @@ public class WolfSSLKeyStore extends KeyStoreSpi {
     }
 
     /**
+     * Probes the specified input stream to determine if it contains a
+     * keystore that is supported by this implementation.
+     *
+     * This method is used by KeyStore.getInstance(File, char[]) and similar
+     * methods to auto-detect the keystore type without requiring explicit
+     * type specification.
+     *
+     * @param stream the keystore data to be probed. The stream must support
+     *        mark/reset so the caller can rewind after probing.
+     *
+     * @return true if the keystore data is supported (has WKS magic number),
+     *         otherwise false
+     *
+     * @throws IOException if there is an I/O problem with the keystore data
+     * @throws NullPointerException if the stream is null
+     */
+    public boolean engineProbe(InputStream stream) throws IOException {
+
+        int magic = 0;
+        DataInputStream dis = null;
+
+        if (stream == null) {
+            throw new NullPointerException("InputStream cannot be null");
+        }
+
+        /* Read first 4 bytes to check magic number */
+        dis = new DataInputStream(stream);
+
+        try {
+            magic = dis.readInt();
+            if (magic == WKS_MAGIC_NUMBER) {
+                return true;
+            }
+        }
+        catch (IOException e) {
+            /* Could not read 4 bytes, not a valid WKS file, swallow
+             * exception and return false below. */
+        }
+
+        return false;
+    }
+
+    /**
      * Internal method for logging output.
      *
      * @param msg message to be logged
