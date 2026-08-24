@@ -561,23 +561,6 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_Rsa_wc_1RsaPrivateKeyToP
         }
     }
 
-    /* Get PKCS#8 output size, into pkcs8Sz */
-    if (ret == 0) {
-        ret = wc_CreatePKCS8Key(NULL, &pkcs8Sz, derKey, derKeySz, algoID,
-                                curveOID, oidSz);
-        if (ret == LENGTH_ONLY_E) {
-            pkcs8 = (byte*)XMALLOC(pkcs8Sz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-            if (pkcs8 == NULL) {
-                ret = MEMORY_E;
-            }
-            else {
-                XMEMSET(pkcs8, 0, pkcs8Sz);
-                pkcs8BufSz = pkcs8Sz;
-                ret = 0;
-            }
-        }
-    }
-
     if (ret == 0) {
         /* Allocate temp buffer to hold DER encoded key */
         derKey = (byte*)XMALLOC(derKeySz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
@@ -596,6 +579,23 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_Rsa_wc_1RsaPrivateKeyToP
         if (ret > 0) {
             derKeySz = ret;
             ret = 0;
+        }
+    }
+
+    /* Get PKCS#8 output size, into pkcs8Sz. */
+    if (ret == 0) {
+        ret = wc_CreatePKCS8Key(NULL, &pkcs8Sz, derKey, derKeySz, algoID,
+                                curveOID, oidSz);
+        if (ret == LENGTH_ONLY_E) {
+            pkcs8 = (byte*)XMALLOC(pkcs8Sz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+            if (pkcs8 == NULL) {
+                ret = MEMORY_E;
+            }
+            else {
+                XMEMSET(pkcs8, 0, pkcs8Sz);
+                pkcs8BufSz = pkcs8Sz;
+                ret = 0;
+            }
         }
     }
 

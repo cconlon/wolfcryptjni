@@ -424,6 +424,21 @@ public class RsaTest {
     }
 
     @Test
+    public void rsaPrivateKeyToPkcs8RoundTrip() {
+        Rsa key = makeKeyWithRetry(2048, 65537, rng);
+
+        byte[] pkcs8 = key.privateKeyEncodePKCS8();
+        assertNotNull(pkcs8);
+        assertTrue(pkcs8.length > 0);
+        key.releaseNativeStruct();
+
+        /* PKCS8 output must decode back into a usable private key */
+        Rsa decoded = new Rsa();
+        decoded.decodePrivateKeyPKCS8(pkcs8);
+        decoded.releaseNativeStruct();
+    }
+
+    @Test
     public void publicKeyDecodeAndEncodeWithByteBuffer() {
         Rsa key = new Rsa();
 
