@@ -888,6 +888,10 @@ revoked, validation will fail. The difference only affects behavior when one
 method succeeds and the other would have failed (e.g., OCSP unreachable but
 CRL available).
 
+A `PKIXRevocationChecker` added with `addCertPathChecker()` applies
+irregardless of if `setRevocationEnabled()` is set, so `PREFER_CRLS` with CRLs
+in the `CertStore` list performs CRL checking even when revocation is disabled.
+
 #### Indirect CRL Not Supported
 
 Native wolfSSL does not support indirect CRLs. An indirect CRL is a CRL signed

@@ -73,7 +73,8 @@ import java.security.cert.CertificateException;
  *        validation will not return PolicyNode in CertPathValidatorResult
  *
  * Revocation checking is supported via:
- *     - CRL: If PKIXParameters.isRevocationEnabled() is true and appropriate
+ *     - CRL: If PKIXParameters.isRevocationEnabled() is true, or a
+ *       PKIXRevocationChecker with PREFER_CRLS is registered, and appropriate
  *       CRLs have been loaded into CertStore Set
  *     - OCSP: via getRevocationChecker() which returns a
  *       WolfCryptPKIXRevocationChecker supporting OCSP and options
@@ -839,25 +840,71 @@ public class WolfCryptPKIXCertPathValidator extends CertPathValidatorSpi {
         CertPath certPath, List<X509Certificate> certs)
         throws CertPathValidatorException {
 
-        /* Report index of last cert in path (closest to trust anchor)
-         * to match SunJCE behavior. */
-        int failIndex = 0;
-        if (certs != null && certs.size() > 1) {
-            failIndex = certs.size() - 1;
-        }
         throw new CertPathValidatorException(message, null, certPath,
-            failIndex, BasicReason.UNDETERMINED_REVOCATION_STATUS);
+            lastCertIndex(certs), BasicReason.UNDETERMINED_REVOCATION_STATUS);
     }
 
     /**
-     * Check if revocation has been enabled in PKIXParameters, and if so
-     * find and load any CRLs in params.getCertStores().
+     * Index of cert closest to the trust anchor.
      *
-     * When a PKIXRevocationChecker is registered via addCertPathChecker(),
-     * that checker handles revocation checking. CRL checking in the native
-     * CertManager is only enabled if:
-     *   - No PKIXRevocationChecker is present (default CRL behavior), or
-     *   - PKIXRevocationChecker has PREFER_CRLS option set
+     * @param certs certificate list from the CertPath
+     *
+     * @return index of the last cert, or 0 for a single-cert path
+     */
+    private static int lastCertIndex(List<X509Certificate> certs) {
+
+        if (certs != null && certs.size() > 1) {
+            return certs.size() - 1;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Disable native CRL checking after a PREFER_CRLS checker found no CRL
+     * to load, so wolfSSL doesn't fail chain validation on a missing CRL. With
+     * NO_FALLBACK set, revocation is undetermined, which fails validation
+     * unless SOFT_FAIL is set. Without NO_FALLBACK, the OCSP result the
+     * checker already produced in check() propogates.
+     *
+     * @param revChecker the registered PREFER_CRLS checker
+     * @param noFallback true if the checker has NO_FALLBACK set
+     * @param cm WolfSSLCertManager with CRL checking enabled
+     * @param certPath the CertPath being validated, for exception reporting
+     * @param failIndex index of the cert to report
+     *
+     * @throws CertPathValidatorException if revocation is undetermined and
+     *         SOFT_FAIL is not set, or native CRL checking cannot be disabled
+     */
+    private void handleMissingCrl(WolfCryptPKIXRevocationChecker revChecker,
+        boolean noFallback, WolfSSLCertManager cm, CertPath certPath,
+        int failIndex) throws CertPathValidatorException {
+
+        if (noFallback) {
+            revChecker.handleMissingCrlRevocation(certPath, failIndex);
+        }
+        else {
+            log("no CRL loaded, PREFER_CRLS checker falls back to OCSP");
+        }
+
+        try {
+            cm.CertManagerDisableCRL();
+        }
+        catch (WolfCryptException e) {
+            throw new CertPathValidatorException("Failed to disable CRL " +
+                "checking in native WolfSSLCertManager", e);
+        }
+    }
+
+    /**
+     * Check if CRL checking is wanted and, if so, find and load any CRLs in
+     * params.getCertStores().
+     *
+     * CRL checking in the native CertManager is enabled when
+     * PKIXParameters.isRevocationEnabled() is true, or when a
+     * PKIXRevocationChecker with PREFER_CRLS is registered, which applies
+     * irregardless of the revocation flag. A registered checker without
+     * PREFER_CRLS handles revocation itself via OCSP.
      *
      * @param params parameters used to check if revocation is enabled and,
      *        if so load any CRLs available
@@ -877,10 +924,13 @@ public class WolfCryptPKIXCertPathValidator extends CertPathValidatorSpi {
         int i = 0;
         int loadedCount = 0;
         int certCount = 0;
+        int failIndex = lastCertIndex(certs);
         List<CertStore> stores = null;
         Collection<? extends CRL> crls = null;
         boolean hasRevocationChecker = false;
         boolean preferCrls = false;
+        boolean noFallback = false;
+        WolfCryptPKIXRevocationChecker revChecker = null;
 
         if (params == null || cm == null) {
             throw new CertPathValidatorException(
@@ -894,13 +944,14 @@ public class WolfCryptPKIXCertPathValidator extends CertPathValidatorSpi {
             for (PKIXCertPathChecker checker : pathCheckers) {
                 if (checker instanceof WolfCryptPKIXRevocationChecker) {
                     hasRevocationChecker = true;
-                    WolfCryptPKIXRevocationChecker revChecker =
-                        (WolfCryptPKIXRevocationChecker)checker;
+                    revChecker = (WolfCryptPKIXRevocationChecker)checker;
                     Set<PKIXRevocationChecker.Option> options =
                         revChecker.getOptions();
-                    if (options != null && options.contains(
-                        PKIXRevocationChecker.Option.PREFER_CRLS)) {
-                        preferCrls = true;
+                    if (options != null) {
+                        preferCrls = options.contains(
+                            PKIXRevocationChecker.Option.PREFER_CRLS);
+                        noFallback = options.contains(
+                            PKIXRevocationChecker.Option.NO_FALLBACK);
                     }
                     break;
                 }
@@ -913,18 +964,24 @@ public class WolfCryptPKIXCertPathValidator extends CertPathValidatorSpi {
             return;
         }
 
-        if (params.isRevocationEnabled()) {
-            log("revocation enabled in PKIXParameters, checking for CRLs " +
-                "to load");
+        if (params.isRevocationEnabled() || preferCrls) {
+            log("revocation enabled or PREFER_CRLS checker registered, " +
+                "checking for CRLs to load");
 
             if (!WolfCrypt.CrlEnabled()) {
                 throw new CertPathValidatorException(
-                    "Revocation enabled in PKIXParameters but native " +
-                    "wolfCrypt CRL not compiled in");
+                    "CRL checking requested but native wolfCrypt CRL not " +
+                    "compiled in");
             }
 
             /* Enable CRL in native WolfSSLCertManager */
-            cm.CertManagerEnableCRL(WolfCrypt.WOLFSSL_CRL_CHECK);
+            try {
+                cm.CertManagerEnableCRL(WolfCrypt.WOLFSSL_CRL_CHECK);
+            }
+            catch (WolfCryptException e) {
+                throw new CertPathValidatorException("Failed to enable CRL " +
+                    "checking in native WolfSSLCertManager", e);
+            }
             log("CRL support enabled in native WolfSSLCertManager");
 
             stores = params.getCertStores();
@@ -939,6 +996,10 @@ public class WolfCryptPKIXCertPathValidator extends CertPathValidatorSpi {
                         "Revocation checking enabled but no CRLs available " +
                         "and no PKIXRevocationChecker configured for OCSP",
                         certPath, certs);
+                }
+                else {
+                    handleMissingCrl(revChecker, noFallback, cm, certPath,
+                        failIndex);
                 }
 
                 return;
@@ -990,22 +1051,32 @@ public class WolfCryptPKIXCertPathValidator extends CertPathValidatorSpi {
                 }
             } catch (CertStoreException e) {
                 throw new CertPathValidatorException(e);
+            } catch (WolfCryptException e) {
+                throw new CertPathValidatorException(
+                    "Failed to load CRL into native WolfSSLCertManager", e);
             }
 
             log("loaded " + loadedCount + " CRLs into WolfSSLCertManager");
 
             /* If no CRLs were loaded and no PKIXRevocationChecker is handling
              * OCSP, we cannot determine revocation status. */
-            if (loadedCount == 0 && !hasRevocationChecker) {
-                throwUndeterminedRevocationStatus(
-                    "Revocation checking enabled but no CRLs found in " +
-                    "CertStores and no PKIXRevocationChecker configured " +
-                    "for OCSP",
-                    certPath, certs);
+            if (loadedCount == 0) {
+                if (!hasRevocationChecker) {
+                    throwUndeterminedRevocationStatus(
+                        "Revocation checking enabled but no CRLs found in " +
+                        "CertStores and no PKIXRevocationChecker configured " +
+                        "for OCSP",
+                        certPath, certs);
+                }
+                else {
+                    handleMissingCrl(revChecker, noFallback, cm, certPath,
+                        failIndex);
+                }
             }
         }
         else {
-            log("revocation not enabled in PKIXParameters");
+            log("revocation not enabled in PKIXParameters and no PREFER_CRLS" +
+                "checker registered");
         }
     }
 
