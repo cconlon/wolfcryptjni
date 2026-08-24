@@ -64,17 +64,19 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_AesGmac_native_1init(
     JNIEnv* env, jobject this)
 {
 #ifdef HAVE_AESGCM
+    int ret = 0;
     Gmac* gmac = (Gmac*) getNativeStruct(env, this);
     if ((*env)->ExceptionOccurred(env)) {
         /* getNativeStruct may throw exception, prevent throwing another */
         return;
     }
 
-    /* GMAC struct is already zero-initialized in mallocNativeStruct_internal */
-    /* Actual initialization happens in wc_GmacSetKey when we have the key */
+    ret = wc_AesInit(&gmac->aes, NULL, INVALID_DEVID);
+    if (ret != 0) {
+        throwWolfCryptExceptionFromError(env, ret);
+    }
 
     LogStr("native_init(gmac=%p)\n", gmac);
-    (void)gmac; /* suppress unused variable warning */
 #else
     throwNotCompiledInException(env);
 #endif
@@ -93,9 +95,9 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_AesGmac_native_1free(
     LogStr("free Gmac %p\n", gmac);
 
     if (gmac) {
-        /* Only clear the GMAC struct - do NOT free the memory here.
-         * The base class NativeStruct.xfree() will handle the actual
-         * memory deallocation to avoid double-free. */
+        /* Free AES backend resources, then clear the struct.
+         * NativeStruct.xfree() frees Gmac struct. */
+        wc_AesFree(&gmac->aes);
         XMEMSET(gmac, 0, sizeof(Gmac));
     }
 #else
@@ -242,8 +244,10 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_AesGmac_wc_1Gmac(
         authInSz = getByteArrayLength(env, authIn_object);
         authTagSz = getByteArrayLength(env, authTag_object);
 
-        /* Set the key */
-        ret = wc_GmacSetKey(&gmac, key, keySz);
+        ret = wc_AesInit(&gmac.aes, NULL, INVALID_DEVID);
+        if (ret == 0) {
+            ret = wc_GmacSetKey(&gmac, key, keySz);
+        }
 
         if (ret == 0) {
             /* Use a local buffer for the auth tag result to avoid
@@ -319,8 +323,10 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_AesGmac_wc_1GmacVerify(
         authInSz = getByteArrayLength(env, authIn_object);
         authTagSz = getByteArrayLength(env, authTag_object);
 
-        /* Set the key */
-        ret = wc_GmacSetKey(&gmac, key, keySz);
+        ret = wc_AesInit(&gmac.aes, NULL, INVALID_DEVID);
+        if (ret == 0) {
+            ret = wc_GmacSetKey(&gmac, key, keySz);
+        }
 
         if (ret == 0) {
             /* Generate the expected tag and compare */

@@ -378,6 +378,26 @@ public class AesGmacTest {
     }
 
     @Test
+    public void testAesGmacSetKeyAfterReleaseThrows() {
+        if (!FeatureDetect.AesGmacEnabled()) {
+            /* skip test if AES-GMAC is not compiled in native wolfCrypt */
+            return;
+        }
+
+        AesGmac gmac = new AesGmac();
+        gmac.setKey(new byte[16]);
+        gmac.releaseNativeStruct();
+
+        /* Re-keying a released object must throw, its AES was freed */
+        try {
+            gmac.setKey(new byte[16]);
+            fail("Expected IllegalStateException");
+        } catch (IllegalStateException e) {
+            /* Expected */
+        }
+    }
+
+    @Test
     public void testAesGmacInvalidInputs() {
         if (!FeatureDetect.AesGmacEnabled()) {
             /* skip test if AES-GMAC is not compiled in native wolfCrypt */

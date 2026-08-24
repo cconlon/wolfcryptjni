@@ -66,10 +66,16 @@ public class AesGmac extends NativeStruct {
     }
 
     @Override
-    public void releaseNativeStruct() {
+    public synchronized void releaseNativeStruct() {
         synchronized (stateLock) {
-            native_free();
-            super.releaseNativeStruct();
+            if ((state != WolfCryptState.UNINITIALIZED) &&
+                (state != WolfCryptState.RELEASED)) {
+                synchronized (pointerLock) {
+                    native_free();
+                    super.releaseNativeStruct();
+                }
+                state = WolfCryptState.RELEASED;
+            }
         }
     }
 
@@ -225,8 +231,10 @@ public class AesGmac extends NativeStruct {
     }
 
     private void throwIfKeyNotLoaded() throws IllegalStateException {
-        if (state != WolfCryptState.READY) {
-            throw new IllegalStateException("No key available");
+        synchronized (stateLock) {
+            if (state != WolfCryptState.READY) {
+                throw new IllegalStateException("No key available");
+            }
         }
     }
 
