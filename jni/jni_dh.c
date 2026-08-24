@@ -320,7 +320,6 @@ Java_com_wolfssl_wolfcrypt_Dh_wc_1DhGenerateKeyPair(
     LogStr("wc_DhGenerateKeyPair(key, rng, priv, privSz, pub, pubSz) = %d\n",
         ret);
     LogStr("private[%u]: [%p]\n", privSz, priv);
-    LogHex(priv, 0, privSz);
     LogStr("public[%u]: [%p]\n", pubSz, pub);
     LogHex(pub, 0, pubSz);
 
@@ -455,7 +454,6 @@ Java_com_wolfssl_wolfcrypt_Dh_wc_1DhAgree(
     LogStr("wc_DhAgree(key, secret, secretSz, priv, privSz, pub, pubSz) = %d\n",
         ret);
     LogStr("secret[%u]: [%p]\n", secretSz, secret);
-    LogHex(secret, 0, secretSz);
 
     if (secret != NULL) {
     #if (LIBWOLFSSL_VERSION_HEX >= 0x05008004) && \
