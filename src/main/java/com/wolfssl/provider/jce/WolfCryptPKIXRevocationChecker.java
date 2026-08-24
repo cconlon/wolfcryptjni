@@ -24,6 +24,7 @@ package com.wolfssl.provider.jce;
 import java.net.URI;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertPath;
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.CertPathValidatorException.BasicReason;
 import java.security.cert.Extension;
@@ -541,6 +542,27 @@ public class WolfCryptPKIXRevocationChecker extends PKIXRevocationChecker {
         } else {
             throw e;
         }
+    }
+
+    /**
+     * Fail closed when a PREFER_CRLS/NO_FALLBACK checker has no CRL source.
+     *
+     * check() runs before CRLs are loaded and cannot see whether a CRL source
+     * is configured, so the validator calls this after CRL setup. With OCSP
+     * suppressed by NO_FALLBACK and no CRL to check, revocation status is
+     * undetermined. Honors SOFT_FAIL via handleException().
+     *
+     * @param certPath the CertPath being validated, for exception reporting
+     * @param index index of the cert whose revocation status is undetermined
+     *
+     * @throws CertPathValidatorException if SOFT_FAIL is not set
+     */
+    void handleMissingCrlRevocation(CertPath certPath, int index)
+        throws CertPathValidatorException {
+        handleException(new CertPathValidatorException(
+            "PREFER_CRLS with NO_FALLBACK selected but no CRL source is " +
+            "available, revocation status cannot be determined", null,
+            certPath, index, BasicReason.UNDETERMINED_REVOCATION_STATUS));
     }
 
     /**

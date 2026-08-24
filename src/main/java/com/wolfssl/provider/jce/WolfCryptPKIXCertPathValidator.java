@@ -839,14 +839,24 @@ public class WolfCryptPKIXCertPathValidator extends CertPathValidatorSpi {
         CertPath certPath, List<X509Certificate> certs)
         throws CertPathValidatorException {
 
-        /* Report index of last cert in path (closest to trust anchor)
-         * to match SunJCE behavior. */
-        int failIndex = 0;
-        if (certs != null && certs.size() > 1) {
-            failIndex = certs.size() - 1;
-        }
         throw new CertPathValidatorException(message, null, certPath,
-            failIndex, BasicReason.UNDETERMINED_REVOCATION_STATUS);
+            lastCertIndex(certs), BasicReason.UNDETERMINED_REVOCATION_STATUS);
+    }
+
+    /**
+     * Index of cert closest to the trust anchor.
+     *
+     * @param certs certificate list from the CertPath
+     *
+     * @return index of the last cert, or 0 for a single-cert path
+     */
+    private static int lastCertIndex(List<X509Certificate> certs) {
+
+        if (certs != null && certs.size() > 1) {
+            return certs.size() - 1;
+        }
+
+        return 0;
     }
 
     /**
@@ -877,10 +887,13 @@ public class WolfCryptPKIXCertPathValidator extends CertPathValidatorSpi {
         int i = 0;
         int loadedCount = 0;
         int certCount = 0;
+        int failIndex = lastCertIndex(certs);
         List<CertStore> stores = null;
         Collection<? extends CRL> crls = null;
         boolean hasRevocationChecker = false;
         boolean preferCrls = false;
+        boolean noFallback = false;
+        WolfCryptPKIXRevocationChecker revChecker = null;
 
         if (params == null || cm == null) {
             throw new CertPathValidatorException(
@@ -894,13 +907,14 @@ public class WolfCryptPKIXCertPathValidator extends CertPathValidatorSpi {
             for (PKIXCertPathChecker checker : pathCheckers) {
                 if (checker instanceof WolfCryptPKIXRevocationChecker) {
                     hasRevocationChecker = true;
-                    WolfCryptPKIXRevocationChecker revChecker =
-                        (WolfCryptPKIXRevocationChecker)checker;
+                    revChecker = (WolfCryptPKIXRevocationChecker)checker;
                     Set<PKIXRevocationChecker.Option> options =
                         revChecker.getOptions();
-                    if (options != null && options.contains(
-                        PKIXRevocationChecker.Option.PREFER_CRLS)) {
-                        preferCrls = true;
+                    if (options != null) {
+                        preferCrls = options.contains(
+                            PKIXRevocationChecker.Option.PREFER_CRLS);
+                        noFallback = options.contains(
+                            PKIXRevocationChecker.Option.NO_FALLBACK);
                     }
                     break;
                 }
@@ -939,6 +953,12 @@ public class WolfCryptPKIXCertPathValidator extends CertPathValidatorSpi {
                         "Revocation checking enabled but no CRLs available " +
                         "and no PKIXRevocationChecker configured for OCSP",
                         certPath, certs);
+                }
+                else if (preferCrls && noFallback) {
+                    revChecker.handleMissingCrlRevocation(certPath, failIndex);
+                    /* Disable CRL if SOFT_FAIL suppressed exception so we
+                     * don't hard fail on missing CRL */
+                    cm.CertManagerDisableCRL();
                 }
 
                 return;
@@ -996,16 +1016,30 @@ public class WolfCryptPKIXCertPathValidator extends CertPathValidatorSpi {
 
             /* If no CRLs were loaded and no PKIXRevocationChecker is handling
              * OCSP, we cannot determine revocation status. */
-            if (loadedCount == 0 && !hasRevocationChecker) {
-                throwUndeterminedRevocationStatus(
-                    "Revocation checking enabled but no CRLs found in " +
-                    "CertStores and no PKIXRevocationChecker configured " +
-                    "for OCSP",
-                    certPath, certs);
+            if (loadedCount == 0) {
+                if (!hasRevocationChecker) {
+                    throwUndeterminedRevocationStatus(
+                        "Revocation checking enabled but no CRLs found in " +
+                        "CertStores and no PKIXRevocationChecker configured " +
+                        "for OCSP",
+                        certPath, certs);
+                }
+                else if (preferCrls && noFallback) {
+                    revChecker.handleMissingCrlRevocation(certPath, failIndex);
+                    /* Disable CRL if SOFT_FAIL suppressed exception so we
+                     * don't hard fail on missing CRL */
+                    cm.CertManagerDisableCRL();
+                }
             }
         }
         else {
             log("revocation not enabled in PKIXParameters");
+
+            /* A PREFER_CRLS checker with NO_FALLBACK relies solely on CRLs,
+             * but with revocation disabled no CRLs are loaded. Fail closed. */
+            if (hasRevocationChecker && preferCrls && noFallback) {
+                revChecker.handleMissingCrlRevocation(certPath, failIndex);
+            }
         }
     }
 

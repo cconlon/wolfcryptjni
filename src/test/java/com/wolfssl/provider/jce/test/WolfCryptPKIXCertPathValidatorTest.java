@@ -33,6 +33,7 @@ import org.junit.BeforeClass;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -57,6 +58,7 @@ import java.security.cert.CertPath;
 import java.security.cert.CertPathValidator;
 import java.security.cert.CertPathValidatorResult;
 import java.security.cert.PKIXParameters;
+import java.security.cert.PKIXRevocationChecker;
 import java.security.cert.PKIXCertPathChecker;
 import java.security.cert.PKIXCertPathValidatorResult;
 import java.security.cert.CertificateException;
@@ -312,6 +314,176 @@ public class WolfCryptPKIXCertPathValidatorTest {
         CertPathValidatorResult result = cpv.validate(path, params);
 
         checkPKIXCertPathValidatorResult(result, caCert, certPubKey);
+    }
+
+    /* Build a single server-cert path validated against the RSA CA anchor. */
+    private CertPath singleServerCertPath(CertificateFactory certFactory)
+        throws Exception {
+
+        List<Certificate> certList = new ArrayList<>();
+        InputStream fis = new FileInputStream(serverCertDer);
+        certList.add(certFactory.generateCertificate(fis));
+        fis.close();
+        return certFactory.generateCertPath(certList);
+    }
+
+    /**
+     * PREFER_CRLS with NO_FALLBACK and no CRL source must fail closed with
+     * UNDETERMINED_REVOCATION_STATUS.
+     */
+    @Test
+    public void testPreferCrlsNoFallbackWithoutCrlFailsClosed()
+        throws Exception {
+
+        KeyStore store = createKeyStoreFromFile(jksCaServerRSA2048,
+            keyStorePass);
+        if (store == null || store.size() != 1) {
+            throw new Exception("Error creating KeyStore");
+        }
+
+        CertificateFactory certFactory =
+            CertificateFactory.getInstance("X.509");
+        CertPath path = singleServerCertPath(certFactory);
+        CertPathValidator cpv = CertPathValidator.getInstance("PKIX", provider);
+
+        PKIXRevocationChecker rc =
+            (PKIXRevocationChecker) cpv.getRevocationChecker();
+        rc.setOptions(EnumSet.of(PKIXRevocationChecker.Option.PREFER_CRLS,
+            PKIXRevocationChecker.Option.NO_FALLBACK));
+
+        PKIXParameters params = new PKIXParameters(store);
+        params.setRevocationEnabled(false);
+        params.addCertPathChecker(rc);
+
+        try {
+            cpv.validate(path, params);
+            fail("Validation should fail closed with no CRL source");
+        } catch (CertPathValidatorException e) {
+            assertEquals(BasicReason.UNDETERMINED_REVOCATION_STATUS,
+                e.getReason());
+        }
+    }
+
+    /**
+     * With SOFT_FAIL, the missing-CRL determination is soft, so validation
+     * completes instead of failing closed. The soft-fail exception is not
+     * asserted here because addCertPathChecker() clones rc, so it lands on
+     * the clone rather than rc.
+     */
+    @Test
+    public void testPreferCrlsNoFallbackWithoutCrlSoftFailPasses()
+        throws Exception {
+
+        KeyStore store = createKeyStoreFromFile(jksCaServerRSA2048,
+            keyStorePass);
+        if (store == null || store.size() != 1) {
+            throw new Exception("Error creating KeyStore");
+        }
+
+        CertificateFactory certFactory =
+            CertificateFactory.getInstance("X.509");
+        CertPath path = singleServerCertPath(certFactory);
+        CertPathValidator cpv =
+            CertPathValidator.getInstance("PKIX", provider);
+
+        PKIXRevocationChecker rc =
+            (PKIXRevocationChecker) cpv.getRevocationChecker();
+        rc.setOptions(EnumSet.of(PKIXRevocationChecker.Option.PREFER_CRLS,
+            PKIXRevocationChecker.Option.NO_FALLBACK,
+            PKIXRevocationChecker.Option.SOFT_FAIL));
+
+        PKIXParameters params = new PKIXParameters(store);
+        params.setRevocationEnabled(false);
+        params.addCertPathChecker(rc);
+
+        cpv.validate(path, params);
+    }
+
+    /**
+     * SOFT_FAIL with revocation enabled but no CRL source must also complete.
+     * Revocation turns on the native CRL check, so the missing-CRL path must
+     * disable it under SOFT_FAIL to avoid a hard CRL_MISSING failure.
+     */
+    @Test
+    public void testPreferCrlsNoFallbackRevocationEnabledSoftFailPasses()
+        throws Exception {
+
+        if (!WolfCrypt.CrlEnabled()) {
+            System.out.println("CertPathValidator revocation status test " +
+                "skipped, CRL not compiled in");
+            return;
+        }
+
+        KeyStore store = createKeyStoreFromFile(jksCaServerRSA2048,
+            keyStorePass);
+        if (store == null || store.size() != 1) {
+            throw new Exception("Error creating KeyStore");
+        }
+
+        CertificateFactory certFactory =
+            CertificateFactory.getInstance("X.509");
+        CertPath path = singleServerCertPath(certFactory);
+        CertPathValidator cpv = CertPathValidator.getInstance("PKIX", provider);
+
+        PKIXRevocationChecker rc =
+            (PKIXRevocationChecker) cpv.getRevocationChecker();
+        rc.setOptions(EnumSet.of(PKIXRevocationChecker.Option.PREFER_CRLS,
+            PKIXRevocationChecker.Option.NO_FALLBACK,
+            PKIXRevocationChecker.Option.SOFT_FAIL));
+
+        PKIXParameters params = new PKIXParameters(store);
+        params.setRevocationEnabled(true);
+        params.addCertPathChecker(rc);
+
+        cpv.validate(path, params);
+    }
+
+    /**
+     * A PREFER_CRLS/NO_FALLBACK checker with CRLs actually loaded must still
+     * validate a non-revoked cert. The missing-CRL fail-closed path must not
+     * fire when a CRL source is present.
+     */
+    @Test
+    public void testPreferCrlsNoFallbackWithCrlValidates()
+        throws Exception {
+
+        if (!WolfCrypt.CrlEnabled()) {
+            System.out.println("PREFER_CRLS with CRL test skipped, " +
+                "CRL not compiled in");
+            return;
+        }
+
+        KeyStore store = createKeyStoreFromFile(jksCaServerRSA2048,
+            keyStorePass);
+        if (store == null || store.size() != 1) {
+            throw new Exception("Error creating KeyStore");
+        }
+
+        CertificateFactory certFactory =
+            CertificateFactory.getInstance("X.509");
+        CertPath path = singleServerCertPath(certFactory);
+        CertPathValidator cpv = CertPathValidator.getInstance("PKIX", provider);
+
+        PKIXRevocationChecker rc =
+            (PKIXRevocationChecker) cpv.getRevocationChecker();
+        rc.setOptions(EnumSet.of(PKIXRevocationChecker.Option.PREFER_CRLS,
+            PKIXRevocationChecker.Option.NO_FALLBACK));
+
+        /* crl.der matches ca-cert.der, the root for server-cert.der */
+        Collection<CRL> crls = new HashSet<>();
+        InputStream fis = new FileInputStream(crlDer);
+        crls.add(certFactory.generateCRL(fis));
+        fis.close();
+        List<CertStore> certStores = new ArrayList<>();
+        certStores.add(CertStore.getInstance("Collection",
+            new CollectionCertStoreParameters(crls)));
+
+        PKIXParameters params = new PKIXParameters(store);
+        params.setCertStores(certStores);
+        params.setRevocationEnabled(true);
+        params.addCertPathChecker(rc);
+
+        cpv.validate(path, params);
     }
 
     /**
@@ -2047,6 +2219,96 @@ public class WolfCryptPKIXCertPathValidatorTest {
             assertEquals("Expected BasicReason.UNDETERMINED_REVOCATION_STATUS",
                 BasicReason.UNDETERMINED_REVOCATION_STATUS, e.getReason());
         }
+    }
+
+    /**
+     * PREFER_CRLS/NO_FALLBACK with revocation enabled and a CertStore that
+     * loads no matching CRL (loadedCount == 0) must fail closed.
+     */
+    @Test
+    public void testPreferCrlsNoFallbackEmptyCertStoreFailsClosed()
+        throws Exception {
+
+        if (!WolfCrypt.CrlEnabled()) {
+            System.out.println("CertPathValidator revocation status test " +
+                "skipped, CRL not compiled in");
+            return;
+        }
+
+        KeyStore store = createKeyStoreFromFile(jksCaServerRSA2048,
+            keyStorePass);
+        if (store == null || store.size() != 1) {
+            throw new Exception("Error creating KeyStore");
+        }
+
+        CertificateFactory certFactory =
+            CertificateFactory.getInstance("X.509");
+        CertPath path = singleServerCertPath(certFactory);
+        CertPathValidator cpv = CertPathValidator.getInstance("PKIX", provider);
+
+        PKIXRevocationChecker rc =
+            (PKIXRevocationChecker) cpv.getRevocationChecker();
+        rc.setOptions(EnumSet.of(PKIXRevocationChecker.Option.PREFER_CRLS,
+            PKIXRevocationChecker.Option.NO_FALLBACK));
+
+        PKIXParameters params = new PKIXParameters(store);
+        params.setRevocationEnabled(true);
+        params.addCertPathChecker(rc);
+        /* Non-empty store list holding no matching CRL drives loadedCount 0 */
+        List<CertStore> certStores = new ArrayList<>();
+        certStores.add(CertStore.getInstance("Collection",
+            new CollectionCertStoreParameters(new HashSet<CRL>())));
+        params.setCertStores(certStores);
+
+        try {
+            cpv.validate(path, params);
+            fail("Expected UNDETERMINED_REVOCATION_STATUS");
+        } catch (CertPathValidatorException e) {
+            assertEquals(BasicReason.UNDETERMINED_REVOCATION_STATUS,
+                e.getReason());
+        }
+    }
+
+    /**
+     * Same as above with SOFT_FAIL, validation must complete because the
+     * missing-CRL path disables the native CRL check.
+     */
+    @Test
+    public void testPreferCrlsNoFallbackEmptyCertStoreSoftFailPasses()
+        throws Exception {
+
+        if (!WolfCrypt.CrlEnabled()) {
+            System.out.println("CertPathValidator revocation status test " +
+                "skipped, CRL not compiled in");
+            return;
+        }
+
+        KeyStore store = createKeyStoreFromFile(jksCaServerRSA2048,
+            keyStorePass);
+        if (store == null || store.size() != 1) {
+            throw new Exception("Error creating KeyStore");
+        }
+
+        CertificateFactory certFactory =
+            CertificateFactory.getInstance("X.509");
+        CertPath path = singleServerCertPath(certFactory);
+        CertPathValidator cpv = CertPathValidator.getInstance("PKIX", provider);
+
+        PKIXRevocationChecker rc =
+            (PKIXRevocationChecker) cpv.getRevocationChecker();
+        rc.setOptions(EnumSet.of(PKIXRevocationChecker.Option.PREFER_CRLS,
+            PKIXRevocationChecker.Option.NO_FALLBACK,
+            PKIXRevocationChecker.Option.SOFT_FAIL));
+
+        PKIXParameters params = new PKIXParameters(store);
+        params.setRevocationEnabled(true);
+        params.addCertPathChecker(rc);
+        List<CertStore> certStores = new ArrayList<>();
+        certStores.add(CertStore.getInstance("Collection",
+            new CollectionCertStoreParameters(new HashSet<CRL>())));
+        params.setCertStores(certStores);
+
+        cpv.validate(path, params);
     }
 
     /**
