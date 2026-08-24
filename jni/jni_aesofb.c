@@ -71,6 +71,7 @@ Java_com_wolfssl_wolfcrypt_AesOfb_native_1set_1key_1internal(
     byte* key = NULL;
     byte* iv  = NULL;
     word32 keySz = 0;
+    (void)opmode;
 
     aes = (Aes*) getNativeStruct(env, this);
     if ((*env)->ExceptionOccurred(env)) {
@@ -87,7 +88,7 @@ Java_com_wolfssl_wolfcrypt_AesOfb_native_1set_1key_1internal(
     }
 
     if (ret == 0) {
-        ret = wc_AesSetKey(aes, key, keySz, iv, opmode);
+        ret = wc_AesSetKey(aes, key, keySz, iv, AES_ENCRYPTION);
     }
 
     if (ret != 0) {
