@@ -164,6 +164,7 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Ecc_wc_1ecc_1make_1key_1ex
 {
 #ifdef HAVE_ECC
     int ret = 0;
+    int curveId = 0;
     ecc_key* ecc = NULL;
     RNG* rng = NULL;
     const char* name = NULL;
@@ -188,29 +189,26 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Ecc_wc_1ecc_1make_1key_1ex
     if (ret == 0) {
         name = (*env)->GetStringUTFChars(env, curveName, 0);
         if (name == NULL) {
-            ret = BAD_FUNC_ARG;
+            /* GetStringUTFChars failed with an exception already pending */
+            return;
         }
-    }
 
-    if (ret == 0) {
-        ret = wc_ecc_get_curve_id_from_name(name);
+        curveId = wc_ecc_get_curve_id_from_name(name);
         (*env)->ReleaseStringUTFChars(env, curveName, name);
+
+        if (curveId < 0) {
+            throwWolfCryptException(env,
+                "ECC curve unsupported or not enabled");
+            return;
+        }
+
+        /* Pass keysize 0 so the curve_id sets the key size, required for
+         * FIPS where approved curves need keysize 0 */
+        ret = wc_ecc_make_key_ex(rng, 0, ecc, curveId);
     }
 
-    if (ret < 0) {
-        throwWolfCryptException(env, "ECC curve unsupported or not enabled");
-
-    } else {
-        /* When using a specific curve_id, pass keysize as 0 to let the
-         * curve_id determine the key size. This is required for FIPS mode
-         * compatibility where keysize must be 0 when using approved curves.
-         * The 'size' parameter from Java is ignored here since curve_id
-         * (stored in ret) defines the actual key size. */
-        ret = wc_ecc_make_key_ex(rng, 0, ecc, ret);
-
-        if (ret < 0) {
-            throwWolfCryptExceptionFromError(env, ret);
-        }
+    if (ret != 0) {
+        throwWolfCryptExceptionFromError(env, ret);
     }
 
     LogStr("ecc_make_key_ex(rng, size, ecc=%p) = %d\n", ecc, ret);
