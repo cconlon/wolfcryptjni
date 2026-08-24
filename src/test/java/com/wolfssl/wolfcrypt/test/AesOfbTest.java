@@ -207,6 +207,25 @@ public class AesOfbTest {
         aesOfb.releaseNativeStruct();
     }
 
+    /**
+     * A DECRYPT_MODE key schedule must still recover ciphertext produced
+     * under ENCRYPT_MODE.
+     */
+    @Test
+    public void aes128OfbDecryptModeSetKeyRoundTrip() {
+        AesOfb enc = new AesOfb();
+        enc.setKey(KEY_128, IV_128, AesOfb.ENCRYPT_MODE);
+        byte[] ciphertext = enc.encrypt(PLAINTEXT_128);
+        assertArrayEquals(CIPHERTEXT_128, ciphertext);
+        enc.releaseNativeStruct();
+
+        AesOfb dec = new AesOfb();
+        dec.setKey(KEY_128, IV_128, AesOfb.DECRYPT_MODE);
+        byte[] decrypted = dec.decrypt(ciphertext);
+        assertArrayEquals(PLAINTEXT_128, decrypted);
+        dec.releaseNativeStruct();
+    }
+
     @Test
     public void aes128OfbLongDataTest() {
         AesOfb aesOfb = new AesOfb();
