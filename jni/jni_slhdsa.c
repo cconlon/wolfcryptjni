@@ -50,6 +50,12 @@
 /* #define WOLFCRYPT_JNI_DEBUG_ON */
 #include <wolfcrypt_jni_debug.h>
 
+#if (LIBWOLFSSL_VERSION_HEX >= 0x05008004) && !defined(WOLFSSL_NO_FORCE_ZERO)
+    #define SLHDSA_FORCE_ZERO(p, len) wc_ForceZero((p), (len))
+#else
+    #define SLHDSA_FORCE_ZERO(p, len) XMEMSET((p), 0, (len))
+#endif
+
 /* A WOLFSSL_SLHDSA_VERIFY_ONLY build provides only public-key verify. DER
  * encode (KeyToDer / PublicKeyToDer) additionally needs
  * WC_ENABLE_ASYM_KEY_EXPORT. */
@@ -1258,7 +1264,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_SlhDsa_wc_1SlhDsaKey_1ex
 
     LogStr("wc_SlhDsaKey_ExportPrivate(key=%p) = %d\n", key, ret);
 
-    wc_ForceZero(output, outputBufSz);
+    SLHDSA_FORCE_ZERO(output, outputBufSz);
     XFREE(output, NULL, DYNAMIC_TYPE_TMP_BUFFER);
 #else
     (void)env;
@@ -1463,7 +1469,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_SlhDsa_wc_1SlhDsaKey_1Ke
 
     LogStr("wc_SlhDsaKey_KeyToDer(key=%p) = %d\n", key, ret);
 
-    wc_ForceZero(output, outputBufSz);
+    SLHDSA_FORCE_ZERO(output, outputBufSz);
     XFREE(output, NULL, DYNAMIC_TYPE_TMP_BUFFER);
 #else
     (void)env;
@@ -1558,7 +1564,7 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_SlhDsa_wc_1SlhDsaKey_1PrivateK
     LogStr("wc_SlhDsaKey_PrivateKeyDecode(key=%p) = %d\n", key, ret);
 
     if (derCopy != NULL) {
-        wc_ForceZero(derCopy, derLen);
+        SLHDSA_FORCE_ZERO(derCopy, derLen);
         XFREE(derCopy, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     }
     releaseByteArray(env, der_object, der, JNI_ABORT);
