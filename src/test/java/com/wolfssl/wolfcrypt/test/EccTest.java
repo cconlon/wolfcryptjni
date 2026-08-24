@@ -298,6 +298,19 @@ public class EccTest {
     }
 
     @Test
+    public void eccMakeKeyOnCurveNullRngReportsBadFuncArg() {
+        Ecc alice = new Ecc();
+        try {
+            /* A null Rng is an argument error, not a curve problem, so it
+             * must be reported as BAD_FUNC_ARG */
+            alice.makeKeyOnCurve(null, 32, "secp256r1");
+            fail("null Rng should fail with exception");
+        } catch (WolfCryptException e) {
+            assertEquals(WolfCryptError.BAD_FUNC_ARG, e.getError());
+        }
+    }
+
+    @Test
     public void eccPrivateToPkcs8() {
         Ecc alice = new Ecc();
         byte[] pkcs8;
