@@ -904,11 +904,10 @@ public class WolfCryptUtil {
      * Get minimum key size limit from disabled algorithms security property
      * for specified algorithm.
      *
-     * Parses constraints like "RSA keySize &lt; 1024" from the security
-     * property and returns the minimum allowed key size. Entries are
-     * matched on their leading algorithm name, any algorithm name may be
-     * used. Only the "&lt;" and "&lt;=" operators are supported, entries
-     * using other operators are ignored.
+     * Parses constraints (ex: {@code RSA keySize < 1024}) from the security
+     * property and returns the minimum allowed key size. Match entries on their
+     * leading algorithm name. Only {@code <} and {@code <=} operators are
+     * supported, entries using other operators are ignored.
      *
      * @param algo Algorithm to search for key size limitation for
      *             (ex: "RSA", "DH", "DSA", "EC")
@@ -920,14 +919,20 @@ public class WolfCryptUtil {
     public static int getDisabledAlgorithmsKeySizeLimit(String algo,
         String propertyName) {
 
-        return getDisabledAlgorithmsKeySizeLimit(algo, propertyName, false);
+        return getDisabledAlgorithmsKeySizeLimit(algo, propertyName, false, 0);
     }
 
     /**
      * Internal implementation of getDisabledAlgorithmsKeySizeLimit().
      *
-     * Matches entries on their leading algorithm name so that, for
+     * Matches entries on leading algorithm name so that, for
      * example, an "ECDH keySize" entry does not set the "DH" limit.
+     *
+     * With a known keySize, an entry disables the key only when all of its
+     * keySize constraints match. denyAfter and jdkCA qualifiers are treated as
+     * satisfied rather than evaluated, so an entry using them fails closed.
+     * With keySize 0, only the floor from the first {@code <} or {@code <=}
+     * constraint is returned.
      *
      * @param algo Algorithm to search for key size limitation for
      *        (ex: "RSA", "DH", "DSA", "EC")
@@ -935,15 +940,17 @@ public class WolfCryptUtil {
      * @param certPathContext true when checking for CertPath validation,
      *        skips entries scoped to usage contexts that can never apply
      *        there
+     * @param keySize actual key size in bits, or 0 to compute the floor only
      *
-     * @return minimum key size allowed, or 0 if not set in property
+     * @return -1 if keySize is disabled, the min-size floor when keySize is
+     *         0, or 0 when no constraint applies
      */
     private static int getDisabledAlgorithmsKeySizeLimit(String algo,
-        String propertyName, boolean certPathContext) {
+        String propertyName, boolean certPathContext, int keySize) {
 
         int ret = 0;
         List<String> disabledList = null;
-        Pattern p = Pattern.compile("keySize\\s*<(=?)\\s*(\\d+)",
+        Pattern p = Pattern.compile("keySize\\s*(>=|<=|==|!=|>|<)\\s*(\\d+)",
             Pattern.CASE_INSENSITIVE);
         Matcher match = null;
 
@@ -959,8 +966,7 @@ public class WolfCryptUtil {
         disabledList = getExpandedDisabledEntries(propertyName);
 
         for (String s : disabledList) {
-            /* Match on the leading algorithm name only, so "ECDH keySize"
-             * does not match algo "DH" */
+            /* Match on leading algorithm name only */
             String disabledName = extractDisabledAlgorithmName(s);
             if (disabledName == null || !disabledName.equalsIgnoreCase(algo)) {
                 continue;
@@ -973,20 +979,54 @@ public class WolfCryptUtil {
             }
 
             match = p.matcher(s);
-            if (match.find()) {
-                try {
-                    int limit = Integer.parseInt(match.group(2));
-                    if (match.group(1).equals("=") &&
-                        limit < Integer.MAX_VALUE) {
-                        /* "keySize <= N" disables through N, minimum allowed
-                         * size is N + 1 */
-                        limit = limit + 1;
+
+            if (keySize > 0) {
+                boolean anyConstraint = false;
+                boolean allMatch = true;
+                while (match.find()) {
+                    String op = match.group(1);
+                    int limit;
+                    try {
+                        limit = Integer.parseInt(match.group(2));
+                    } catch (NumberFormatException e) {
+                        /* Exceeds Integer.MAX_VALUE, ignore this constraint */
+                        continue;
                     }
-                    /* Keep the strictest of multiple matching entries */
-                    ret = Math.max(ret, limit);
-                } catch (NumberFormatException e) {
-                    /* Number exceeds Integer.MAX_VALUE, ignore malformed
-                     * number and leave ret unchanged. */
+                    anyConstraint = true;
+                    boolean matches =
+                        (op.equals("<") && keySize < limit) ||
+                        (op.equals("<=") && keySize <= limit) ||
+                        (op.equals(">") && keySize > limit) ||
+                        (op.equals(">=") && keySize >= limit) ||
+                        (op.equals("==") && keySize == limit) ||
+                        (op.equals("!=") && keySize != limit);
+                    if (!matches) {
+                        allMatch = false;
+                        break;
+                    }
+                }
+                if (anyConstraint && allMatch) {
+                    return -1;
+                }
+            }
+            else {
+                /* keySize unknown, derive floor from first < or <= */
+                while (match.find()) {
+                    String op = match.group(1);
+                    if (!op.equals("<") && !op.equals("<=")) {
+                        continue;
+                    }
+                    try {
+                        int limit = Integer.parseInt(match.group(2));
+                        if (op.equals("<=") && limit < Integer.MAX_VALUE) {
+                            /* "keySize <= N" disables N, min allowed N + 1 */
+                            limit = limit + 1;
+                        }
+                        ret = Math.max(ret, limit);
+                    } catch (NumberFormatException e) {
+                        /* Number exceeds Integer.MAX_VALUE, ignore */
+                    }
+                    break;
                 }
             }
         }
@@ -1049,7 +1089,7 @@ public class WolfCryptUtil {
         boolean certPathContext) {
 
         int keySize = 0;
-        int minSize = 0;
+        int sizeLimit = 0;
         String algorithm = null;
 
         if (key == null) {
@@ -1067,8 +1107,8 @@ public class WolfCryptUtil {
         if (key instanceof RSAPublicKey) {
             RSAPublicKey rsaKey = (RSAPublicKey)key;
             keySize = rsaKey.getModulus().bitLength();
-            minSize = getDisabledAlgorithmsKeySizeLimit("RSA", propertyName,
-                certPathContext);
+            sizeLimit = getDisabledAlgorithmsKeySizeLimit("RSA", propertyName,
+                certPathContext, keySize);
         }
         else if (key instanceof ECPublicKey) {
             ECPublicKey ecKey = (ECPublicKey)key;
@@ -1097,24 +1137,24 @@ public class WolfCryptUtil {
                 }
             }
 
-            minSize = getDisabledAlgorithmsKeySizeLimit("EC", propertyName,
-                certPathContext);
+            sizeLimit = getDisabledAlgorithmsKeySizeLimit("EC", propertyName,
+                certPathContext, keySize);
         }
         else if (key instanceof DSAPublicKey) {
             DSAPublicKey dsaKey = (DSAPublicKey)key;
             if (dsaKey.getParams() != null) {
                 keySize = dsaKey.getParams().getP().bitLength();
             }
-            minSize = getDisabledAlgorithmsKeySizeLimit("DSA", propertyName,
-                certPathContext);
+            sizeLimit = getDisabledAlgorithmsKeySizeLimit("DSA", propertyName,
+                certPathContext, keySize);
         }
         else if (key instanceof DHPublicKey) {
             DHPublicKey dhKey = (DHPublicKey)key;
             if (dhKey.getParams() != null) {
                 keySize = dhKey.getParams().getP().bitLength();
             }
-            minSize = getDisabledAlgorithmsKeySizeLimit("DH", propertyName,
-                certPathContext);
+            sizeLimit = getDisabledAlgorithmsKeySizeLimit("DH", propertyName,
+                certPathContext, keySize);
         }
         else if (key instanceof WolfCryptMlDsaPublicKey) {
             /* ML-DSA uses fixed parameter sets, no key size constraints */
@@ -1136,8 +1176,13 @@ public class WolfCryptUtil {
                 certPathContext);
         }
 
-        /* If minimum size constraint exists and key is smaller, reject */
-        if (minSize > 0 && keySize < minSize) {
+        /* Negative limit means a >/>=/==/!= disabled this size. */
+        if (sizeLimit < 0) {
+            return false;
+        }
+
+        /* Reject a key below the min size floor */
+        if (sizeLimit > 0 && keySize < sizeLimit) {
             return false;
         }
 
