@@ -1196,10 +1196,17 @@ public class WolfCryptUtilTest {
                 WolfCryptUtil.getDisabledAlgorithmsKeySizeLimit(
                     "RSA", "jdk.certpath.disabledAlgorithms"));
 
-            /* Unsupported operators are ignored */
+            /* The floor overload returns 0 for non-floor operators */
             Security.setProperty("jdk.certpath.disabledAlgorithms",
                 "RSA keySize >= 8192");
-            assertEquals("Unsupported operator should be ignored", 0,
+            assertEquals("keySize >= sets no minimum-size floor", 0,
+                WolfCryptUtil.getDisabledAlgorithmsKeySizeLimit(
+                    "RSA", "jdk.certpath.disabledAlgorithms"));
+
+            /* An & chain still yields the floor from its < constraint */
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize >= 1024 & keySize < 2048");
+            assertEquals("floor comes from the < half of an & chain", 2048,
                 WolfCryptUtil.getDisabledAlgorithmsKeySizeLimit(
                     "RSA", "jdk.certpath.disabledAlgorithms"));
 
@@ -1279,6 +1286,126 @@ public class WolfCryptUtilTest {
                 "RSA keySize < 3072");
             assertFalse("Unqualified keySize entry applies to CertPath",
                 WolfCryptUtil.isKeyAllowedForCertPath(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+        } finally {
+            if (origProperty != null) {
+                Security.setProperty("jdk.certpath.disabledAlgorithms",
+                    origProperty);
+            } else {
+                Security.setProperty("jdk.certpath.disabledAlgorithms", "");
+            }
+        }
+    }
+
+    @Test
+    public void testIsKeyAllowedKeySizeOperators() throws Exception {
+
+        String origProperty = Security.getProperty(
+            "jdk.certpath.disabledAlgorithms");
+        PublicKey rsaPub = null;
+
+        try {
+            KeyPairGenerator kpg =
+                KeyPairGenerator.getInstance("RSA", "wolfJCE");
+            kpg.initialize(2048);
+            rsaPub = kpg.generateKeyPair().getPublic();
+        } catch (Exception e) {
+            /* skip, RSA key generation not available */
+            return;
+        }
+
+        try {
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize == 2048");
+            assertFalse("keySize == N must reject a key of size N",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize == 4096");
+            assertTrue("keySize == N must allow a key of a different size",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize >= 2048");
+            assertFalse("keySize >= N must reject a key of size N",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize >= 4096");
+            assertTrue("keySize >= N must allow a key below N",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize > 1024");
+            assertFalse("keySize > N must reject a key above N",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize > 2048");
+            assertTrue("keySize > N must allow a key of size N",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize != 4096");
+            assertFalse("keySize != N must reject a key of a different size",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize != 2048");
+            assertTrue("keySize != N must allow a key of size N",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+
+            /* < and <= remain handled by the minimum-size floor */
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize < 4096");
+            assertFalse("keySize < N must reject a key below N",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize < 2048");
+            assertTrue("keySize < N must allow a key of size N",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize < 1024, RSA keySize > 4096");
+            assertTrue("floor plus a non-matching range must allow the key",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize < 1024, RSA keySize >= 2048");
+            assertFalse("floor plus a matching range must reject the key",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize >= 2048");
+            assertFalse("keySize >= N rejects via CertPath overload",
+                WolfCryptUtil.isKeyAllowedForCertPath(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+
+            /* & chains AND their keySize constraints, an entry disables the
+             * key only when every constraint holds */
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize >= 1024 & keySize < 2048");
+            assertTrue("key outside an AND range must be allowed",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize >= 1024 & keySize <= 2048");
+            assertFalse("key inside an AND range must be rejected",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
+                    "jdk.certpath.disabledAlgorithms"));
+
+            /* denyAfter is not evaluated, the entry fails closed on keySize */
+            Security.setProperty("jdk.certpath.disabledAlgorithms",
+                "RSA keySize == 2048 & denyAfter 2999-01-01");
+            assertFalse("denyAfter entry applies unconditionally on keySize",
+                WolfCryptUtil.isKeyAllowed(rsaPub,
                     "jdk.certpath.disabledAlgorithms"));
         } finally {
             if (origProperty != null) {
