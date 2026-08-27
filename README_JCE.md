@@ -155,6 +155,8 @@ The JCE provider currently supports the following algorithms:
             OIDs: 2.16.840.1.101.3.4.1.2, 2.16.840.1.101.3.4.1.22, 2.16.840.1.101.3.4.1.42
         AES/CBC/PKCS5Padding
         AES/CTS/NoPadding
+        AES/XTS/NoPadding
+            Aliases: AES_128/XTS/NoPadding, AES_256/XTS/NoPadding
         AES/CCM/NoPadding
         AES/CTR/NoPadding
         AES/ECB/NoPadding

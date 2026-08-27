@@ -65,6 +65,7 @@ import com.wolfssl.wolfcrypt.AesOfb;
 import com.wolfssl.wolfcrypt.AesGcm;
 import com.wolfssl.wolfcrypt.AesCcm;
 import com.wolfssl.wolfcrypt.AesCts;
+import com.wolfssl.wolfcrypt.AesXts;
 import com.wolfssl.wolfcrypt.Des3;
 import com.wolfssl.wolfcrypt.Rsa;
 import com.wolfssl.wolfcrypt.Rng;
@@ -93,7 +94,8 @@ public class WolfCryptCipher extends CipherSpi {
         WC_OFB,
         WC_GCM,
         WC_CCM,
-        WC_CTS
+        WC_CTS,
+        WC_XTS
     }
 
     enum PaddingType {
@@ -133,6 +135,7 @@ public class WolfCryptCipher extends CipherSpi {
     private AesGcm aesGcm = null;
     private AesCcm aesCcm = null;
     private AesCts aesCts = null;
+    private AesXts aesXts = null;
     private Des3 des3     = null;
     private Rsa  rsa      = null;
     private Rng  rng      = null;
@@ -149,6 +152,9 @@ public class WolfCryptCipher extends CipherSpi {
     private Key storedKey = null;
     private AlgorithmParameterSpec storedSpec = null;
     private byte[] iv = null;
+
+    /* Native AES-XTS streaming available */
+    private boolean xtsStream = false;
 
     /* AES-GCM/CCM tag length (bytes), default to 128 bits */
     private int gcmTagLen = 16;
@@ -505,6 +511,14 @@ public class WolfCryptCipher extends CipherSpi {
                     }
                     aesCts = new AesCts();
                 }
+                else if (cipherMode == CipherMode.WC_XTS) {
+                    if (aesXts != null) {
+                        aesXts.releaseNativeStruct();
+                        aesXts = null;
+                    }
+                    aesXts = new AesXts();
+                    xtsStream = AesXts.isStreamEnabled();
+                }
                 break;
 
             case WC_DES3:
@@ -597,6 +611,16 @@ public class WolfCryptCipher extends CipherSpi {
                 supported = 1;
 
                 log("set mode to CTS");
+            }
+
+        } else if (mode.equals("XTS")) {
+
+            /* AES supports XTS */
+            if (cipherType == CipherType.WC_AES) {
+                cipherMode = CipherMode.WC_XTS;
+                supported = 1;
+
+                log("set mode to XTS");
             }
         }
 
@@ -700,13 +724,14 @@ public class WolfCryptCipher extends CipherSpi {
                 totalSz = inputLen;
             }
 
-            /* For block ciphers that require block boundaries, round
-             * to next block size. GCM, CCM, CTR, CTS, and OFB do not require
+            /* For block ciphers that require block boundaries, round down to a
+             * block boundary. GCM, CCM, CTR, CTS, XTS, and OFB do not require
              * block boundaries. */
             if (cipherMode != CipherMode.WC_GCM &&
                 cipherMode != CipherMode.WC_CCM &&
                 cipherMode != CipherMode.WC_CTR &&
                 cipherMode != CipherMode.WC_CTS &&
+                cipherMode != CipherMode.WC_XTS &&
                 cipherMode != CipherMode.WC_OFB) {
                 totalBlocks = totalSz / blockSize;
                 totalSz = totalBlocks * blockSize;
@@ -820,6 +845,7 @@ public class WolfCryptCipher extends CipherSpi {
                 case WC_CBC:
                 case WC_CTR:
                 case WC_OFB:
+                case WC_XTS:
                     if (this.iv != null) {
                         if (this.cipherType == CipherType.WC_AES) {
                             params = AlgorithmParameters.getInstance("AES");
@@ -1080,6 +1106,10 @@ public class WolfCryptCipher extends CipherSpi {
                             this.aesCts.setKey(
                                 encodedKey, iv, AesCts.ENCRYPT_MODE);
                         }
+                        else if (cipherMode == CipherMode.WC_XTS) {
+                            this.aesXts.setKey(
+                                encodedKey, iv, AesXts.ENCRYPT_MODE);
+                        }
                         else if (cipherMode == CipherMode.WC_ECB) {
                             this.aesEcb.setKey(
                                 encodedKey, null, AesEcb.ENCRYPT_MODE);
@@ -1104,6 +1134,10 @@ public class WolfCryptCipher extends CipherSpi {
                         else if (cipherMode == CipherMode.WC_CTS) {
                             this.aesCts.setKey(
                                 encodedKey, iv, AesCts.DECRYPT_MODE);
+                        }
+                        else if (cipherMode == CipherMode.WC_XTS) {
+                            this.aesXts.setKey(
+                                encodedKey, iv, AesXts.DECRYPT_MODE);
                         }
                         else if (cipherMode == CipherMode.WC_ECB) {
                             this.aesEcb.setKey(
@@ -1152,8 +1186,22 @@ public class WolfCryptCipher extends CipherSpi {
                     }
                     break;
             }
+
+        } catch (WolfCryptException e) {
+            throw new InvalidKeyException(e.getMessage(), e);
+
         } finally {
             zeroArray(encodedKey);
+        }
+
+        /* AES-XTS streaming data unit starts under the current tweak */
+        if (cipherMode == CipherMode.WC_XTS && this.xtsStream) {
+            try {
+                this.aesXts.streamInit(iv);
+            } catch (WolfCryptException e) {
+                throw new InvalidKeyException(
+                    "AES-XTS stream init failed: " + e.getMessage(), e);
+            }
         }
     }
 
@@ -1406,6 +1454,17 @@ public class WolfCryptCipher extends CipherSpi {
             return true;
         }
 
+        /* Without native streaming enabled, AES-XTS buffers everything until
+         * final() call. With streaming, at least one block is held back for
+         * ciphertext stealing. */
+        if (cipherType == CipherType.WC_AES &&
+            cipherMode == CipherMode.WC_XTS) {
+            if (!this.xtsStream || (inputSz <= blockSize)) {
+                return true;
+            }
+            return false;
+        }
+
         /* If total data input (plus buffered) is less than block size,
          * update() is a no-op, except for CTR and OFB which are stream
          * ciphers */
@@ -1474,6 +1533,12 @@ public class WolfCryptCipher extends CipherSpi {
             bytesToProcess = bufferedLen;
         }
 
+        /* XTS streaming holds back one block for ciphertext stealing */
+        else if (cipherMode == CipherMode.WC_XTS) {
+            bytesToProcess =
+                ((bufferedLen - blockSize) / blockSize) * blockSize;
+        }
+
         /* If PKCS#5/7 padding, and decrypting, hold on to last block for
          * padding check in wolfCryptFinal() */
         else if (paddingType == PaddingType.WC_PKCS5 &&
@@ -1497,9 +1562,8 @@ public class WolfCryptCipher extends CipherSpi {
             /* process tmpIn[] */
             switch (this.cipherType) {
 
-                /* Only CBC/ECB/CTR/OFB mode reaches this point currently,
-                 * GCM/CCM/CTS cache all data internally above until final
-                 * call */
+                /* Only CBC/ECB/CTR/OFB and streaming XTS reach this point,
+                 * other modes cache all data above until final call */
                 case WC_AES:
                     if (cipherMode == CipherMode.WC_ECB) {
                         output = this.aesEcb.update(tmpIn, 0, tmpIn.length);
@@ -1509,6 +1573,9 @@ public class WolfCryptCipher extends CipherSpi {
                     }
                     else if (cipherMode == CipherMode.WC_OFB) {
                         output = this.aesOfb.update(tmpIn, 0, tmpIn.length);
+                    }
+                    else if (cipherMode == CipherMode.WC_XTS) {
+                        output = this.aesXts.streamUpdate(tmpIn);
                     }
                     else {
                         byte[] full = this.aes.update(tmpIn, 0, tmpIn.length);
@@ -1577,6 +1644,50 @@ public class WolfCryptCipher extends CipherSpi {
         return padded;
     }
 
+    /**
+     * Reset to post-init state after final(), so the next op does not need
+     * another init().
+     */
+    private void resetAfterFinal() {
+        try {
+            bufferedReset();
+
+            wolfCryptSetDirection(this.storedOpMode);
+
+            InitializeNativeStructs();
+
+            /* Preserve existing IV during reset for getIV() behavior. */
+            if (storedSpec == null && this.iv != null) {
+                /* Avoid generating a new random IV during reset */
+                AlgorithmParameterSpec currentIvSpec;
+                if (cipherMode == CipherMode.WC_GCM) {
+                    /* GCM: create GCMParameterSpec with current IV/tag len */
+                    currentIvSpec = new GCMParameterSpec(this.gcmTagLen * 8,
+                        this.iv.clone());
+                } else {
+                    /* Other modes use IvParameterSpec */
+                    currentIvSpec = new IvParameterSpec(this.iv.clone());
+                }
+                wolfCryptSetIV(currentIvSpec, null);
+            } else {
+                wolfCryptSetIV(storedSpec, null);
+            }
+
+            wolfCryptSetKey(storedKey);
+
+            this.aadStream = null;
+            this.operationStarted = false;
+            this.cipherInitialized = true;
+
+        } catch (InvalidKeyException e) {
+            throw new RuntimeException(
+                "Failed to reset cipher after final(): " + e.getMessage(), e);
+        } catch (InvalidAlgorithmParameterException e) {
+            throw new RuntimeException(
+                "Failed to reset cipher after final(): " + e.getMessage(), e);
+        }
+    }
+
     private byte[] wolfCryptFinal(byte[] input, int inputOffset, int len)
         throws IllegalBlockSizeException, BadPaddingException {
 
@@ -1590,23 +1701,34 @@ public class WolfCryptCipher extends CipherSpi {
         /* AES-CTS requires input length >= 16 bytes (RFC 3962/8009).
          * For exactly 16 bytes, CTS reduces to plain CBC, handled in JNI. */
         if (cipherMode == CipherMode.WC_CTS && totalSz < blockSize) {
+            resetAfterFinal();
             throw new IllegalBlockSizeException(
                 "AES-CTS requires input length >= " + blockSize +
                 " bytes, got " + totalSz + " bytes");
         }
 
-        /* AES-GCM, AES-CCM, AES-CTR, AES-CTS, and AES-OFB do not require
-         * block size inputs */
+        /* AES-XTS data units must be at least one block */
+        if (cipherMode == CipherMode.WC_XTS && totalSz < blockSize) {
+            resetAfterFinal();
+            throw new IllegalBlockSizeException(
+                "AES-XTS requires input length >= " + blockSize +
+                " bytes, got " + totalSz + " bytes");
+        }
+
+        /* AES-GCM, AES-CCM, AES-CTR, AES-CTS, AES-XTS, and AES-OFB do not
+         * require block size inputs */
         if (isBlockCipher() &&
             (cipherMode != CipherMode.WC_GCM) &&
             (cipherMode != CipherMode.WC_CCM) &&
             (cipherMode != CipherMode.WC_CTR) &&
             (cipherMode != CipherMode.WC_CTS) &&
+            (cipherMode != CipherMode.WC_XTS) &&
             (cipherMode != CipherMode.WC_OFB) &&
             (this.direction == OpMode.WC_DECRYPT ||
             (this.direction == OpMode.WC_ENCRYPT &&
              this.paddingType != PaddingType.WC_PKCS5)) &&
             (totalSz % blockSize != 0)) {
+            resetAfterFinal();
             throw new IllegalBlockSizeException(
                 "Input length (" + totalSz + ") not multiple of " +
                 blockSize + " bytes. (" + bufferedLen +" buffered)");
@@ -1629,13 +1751,14 @@ public class WolfCryptCipher extends CipherSpi {
         try {
             /* Add padding if encrypting and PKCS5 padding is used, PKCS#5
              * padding is treated the same as PKCS#7 padding here, using
-             * each algorithm's specific block size. CCM, CTR, CTS, and OFB
-             * modes do not use padding */
+             * each algorithm's specific block size. CCM, CTR, CTS, XTS,
+             * and OFB modes do not use padding */
             if (this.direction == OpMode.WC_ENCRYPT &&
                 this.paddingType == PaddingType.WC_PKCS5 &&
                 cipherMode != CipherMode.WC_CCM &&
                 cipherMode != CipherMode.WC_CTR &&
                 cipherMode != CipherMode.WC_CTS &&
+                cipherMode != CipherMode.WC_XTS &&
                 cipherMode != CipherMode.WC_OFB) {
                 if (this.cipherType == CipherType.WC_AES) {
                     byte[] padded = Aes.padPKCS7(tmpIn, Aes.BLOCK_SIZE);
@@ -1761,6 +1884,16 @@ public class WolfCryptCipher extends CipherSpi {
                     else if (cipherMode == CipherMode.WC_CTS) {
                         tmpOut = this.aesCts.update(tmpIn, 0, tmpIn.length);
                     }
+                    else if (cipherMode == CipherMode.WC_XTS) {
+                        if (this.xtsStream) {
+                            /* finish data unit started in wolfCryptSetKey */
+                            tmpOut = this.aesXts.streamFinal(tmpIn);
+                        }
+                        else {
+                            tmpOut = this.aesXts.update(tmpIn, 0,
+                                tmpIn.length);
+                        }
+                    }
                     else if (cipherMode == CipherMode.WC_OFB) {
                         tmpOut = this.aesOfb.update(tmpIn, 0, tmpIn.length);
                     }
@@ -1771,13 +1904,14 @@ public class WolfCryptCipher extends CipherSpi {
                     }
 
                     /* strip PKCS#5/PKCS#7 padding if required,
-                     * CCM, CTR, CTS, and OFB modes do not use padding */
+                     * CCM, CTR, CTS, XTS, and OFB modes do not use padding */
                     if (tmpOut != null && tmpOut.length > 0) {
                         if (this.direction == OpMode.WC_DECRYPT &&
                             this.paddingType == PaddingType.WC_PKCS5 &&
                             cipherMode != CipherMode.WC_CCM &&
                             cipherMode != CipherMode.WC_CTR &&
                             cipherMode != CipherMode.WC_CTS &&
+                            cipherMode != CipherMode.WC_XTS &&
                             cipherMode != CipherMode.WC_OFB) {
                             try {
                                 byte[] padded = tmpOut;
@@ -1892,47 +2026,7 @@ public class WolfCryptCipher extends CipherSpi {
             zeroArray(tmpIn);
         }
 
-        /* reset state, user doesn't need to call init again before use */
-        try {
-            bufferedReset();
-
-            wolfCryptSetDirection(this.storedOpMode);
-
-            InitializeNativeStructs();
-
-            /* Preserve the existing IV during cipher reset to maintain
-             * consistency with JCE getIV() behavior. If storedSpec is null
-             * (no IV was provided initially), wolfCryptSetIV would generate
-             * a new random IV, overwriting the original one. */
-            if (storedSpec == null && this.iv != null) {
-                /* Create appropriate ParameterSpec with the current IV to avoid
-                 * generating a new random IV during reset */
-                AlgorithmParameterSpec currentIvSpec;
-                if (cipherMode == CipherMode.WC_GCM) {
-                    /* For GCM mode, create GCMParameterSpec with current
-                     * IV and tag length */
-                    currentIvSpec = new GCMParameterSpec(
-                        this.gcmTagLen * 8, this.iv.clone());
-                } else {
-                    /* For other modes, use IvParameterSpec */
-                    currentIvSpec = new IvParameterSpec(this.iv.clone());
-                }
-                wolfCryptSetIV(currentIvSpec, null);
-            } else {
-                wolfCryptSetIV(storedSpec, null);
-            }
-
-            wolfCryptSetKey(storedKey);
-
-            this.aadStream = null;
-            this.operationStarted = false;
-            this.cipherInitialized = true;
-
-        } catch (InvalidKeyException e) {
-            throw new RuntimeException(e.getMessage());
-        } catch (InvalidAlgorithmParameterException e) {
-            throw new RuntimeException(e.getMessage());
-        }
+        resetAfterFinal();
 
         return tmpOut;
     }
@@ -1968,20 +2062,29 @@ public class WolfCryptCipher extends CipherSpi {
         throws ShortBufferException {
 
         int outSize;
+        int totalSz;
 
-        if (!isNoOpUpdate(inputSz)) {
+        /* buffered data decides whether this update() produces output */
+        totalSz = (int)Math.min((long)inputSz + (long)bufferedLen,
+            (long)Integer.MAX_VALUE);
+
+        if (!isNoOpUpdate(totalSz)) {
             outSize = engineGetOutputSize(inputSz);
 
-            /* update() in DECRYPT mode with PKCS5 padding will hold
-             * back one block of data for padding check in final() */
+            /* update() in DECRYPT mode with PKCS5 padding emits whole
+             * blocks minus one held back for the padding check in final() */
             if (direction == OpMode.WC_DECRYPT &&
                 paddingType == PaddingType.WC_PKCS5) {
-                if (outSize % blockSize == 0) {
-                    outSize -= blockSize;
+                outSize = ((outSize / blockSize) * blockSize) - blockSize;
+                if (outSize < 0) {
+                    outSize = 0;
                 }
-                else {
-                    outSize -= (outSize % blockSize);
-                }
+            }
+            /* XTS streaming holds back one block until final(). outSize
+             * already includes bufferedLen (engineGetOutputSize()), and the
+             * isNoOpUpdate() gate above guarantees outSize > blockSize */
+            else if (cipherMode == CipherMode.WC_XTS) {
+                outSize = ((outSize - blockSize) / blockSize) * blockSize;
             }
 
             if (outputSz < outSize) {
@@ -2325,6 +2428,14 @@ public class WolfCryptCipher extends CipherSpi {
                 return "GCM";
             case WC_CCM:
                 return "CCM";
+            case WC_CTR:
+                return "CTR";
+            case WC_OFB:
+                return "OFB";
+            case WC_CTS:
+                return "CTS";
+            case WC_XTS:
+                return "XTS";
             default:
                 return "None";
         }
@@ -2372,6 +2483,11 @@ public class WolfCryptCipher extends CipherSpi {
             if (this.aesCts != null) {
                 this.aesCts.releaseNativeStruct();
                 this.aesCts = null;
+            }
+
+            if (this.aesXts != null) {
+                this.aesXts.releaseNativeStruct();
+                this.aesXts = null;
             }
 
             if (this.des3 != null) {
@@ -2519,6 +2635,18 @@ public class WolfCryptCipher extends CipherSpi {
          */
         public wcAESCTSNoPadding() {
             super(CipherType.WC_AES, CipherMode.WC_CTS, PaddingType.WC_NONE);
+        }
+    }
+
+    /**
+     * Class for AES-XTS with no padding
+     */
+    public static final class wcAESXTSNoPadding extends WolfCryptCipher {
+        /**
+         * Create new wcAESXTSNoPadding object
+         */
+        public wcAESXTSNoPadding() {
+            super(CipherType.WC_AES, CipherMode.WC_XTS, PaddingType.WC_NONE);
         }
     }
 
