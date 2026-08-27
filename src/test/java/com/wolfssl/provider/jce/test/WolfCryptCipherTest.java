@@ -103,6 +103,9 @@ public class WolfCryptCipherTest {
         "AES/ECB/PKCS5Padding",
         "AES/GCM/NoPadding",
         "AES/OFB/NoPadding",
+        "AESWrap",
+        "AES/KW/NoPadding",
+        "AES/KW/PKCS5Padding",
         "DESede/CBC/NoPadding",
         "RSA",
         "RSA/ECB/PKCS1Padding"
@@ -344,6 +347,9 @@ public class WolfCryptCipherTest {
         expectedBlockSizes.put("AES/ECB/PKCS5Padding", 16);
         expectedBlockSizes.put("AES/GCM/NoPadding", 16);
         expectedBlockSizes.put("AES/OFB/NoPadding", 16);
+        expectedBlockSizes.put("AESWrap", 8);
+        expectedBlockSizes.put("AES/KW/NoPadding", 8);
+        expectedBlockSizes.put("AES/KW/PKCS5Padding", 8);
         expectedBlockSizes.put("DESede/CBC/NoPadding", 8);
         expectedBlockSizes.put("RSA", 0);
         expectedBlockSizes.put("RSA/ECB/PKCS1Padding", 0);
@@ -6231,6 +6237,11 @@ public class WolfCryptCipherTest {
                 continue;
             }
 
+            /* Skip AES Key Wrap, IV is a fixed integrity check value (not
+             * random) and it rejects the data sizes used below. */
+            if (mode.contains("Wrap") || mode.contains("KW")) {
+                continue;
+            }
 
             /* Skip 3DES if not compiled in */
             if (mode.startsWith("DESede") && !FeatureDetect.Des3Enabled()) {
