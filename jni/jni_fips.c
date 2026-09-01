@@ -541,7 +541,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesSetKey_1fips__Lcom
     LogStr("AesSetKey_fips(aes=%p, key, iv, %s) = %d\n", aes,
         dir ? "dec" : "enc", ret);
     LogStr("key[%u]: [%p]\n", (word32)size, key);
-    LogHex(key, 0, size);
     LogStr("iv[%u]: [%p]\n", (word32)AES_BLOCK_SIZE, iv);
     LogHex(iv, 0, AES_BLOCK_SIZE);
 
@@ -585,7 +584,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesSetKey_1fips__Lcom
     LogStr("AesSetKey_fips(aes=%p, key, iv, %s) = %d\n", aes,
         dir ? "dec" : "enc", ret);
     LogStr("key[%u]: [%p]\n", (word32)size, key);
-    LogHex(key, 0, size);
     LogStr("iv[%u]: [%p]\n", (word32)AES_BLOCK_SIZE, iv);
     LogHex(iv, 0, AES_BLOCK_SIZE);
 
@@ -784,7 +782,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesCbcEncrypt_1fips__
 
     LogStr("AesCbcEncrypt_fips(aes=%p, out, in) = %d\n", aes, ret);
     LogStr("in[%u]: [%p]\n", (word32)size, in);
-    LogHex(in, 0, size);
     LogStr("out[%u]: [%p]\n", (word32)size, out);
     LogHex(out, 0, size);
 
@@ -827,7 +824,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesCbcEncrypt_1fips__
 
     LogStr("AesCbcEncrypt_fips(aes=%p, out, in) = %d\n", aes, ret);
     LogStr("in[%u]: [%p]\n", (word32)size, in);
-    LogHex(in, 0, size);
     LogStr("out[%u]: [%p]\n", (word32)size, out);
     LogHex(out, 0, size);
 
@@ -873,7 +869,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesCbcDecrypt_1fips__
     LogStr("in[%u]: [%p]\n", (word32)size, in);
     LogHex(in, 0, size);
     LogStr("out[%u]: [%p]\n", (word32)size, out);
-    LogHex(out, 0, size);
 
 #endif
 
@@ -916,7 +911,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesCbcDecrypt_1fips__
     LogStr("in[%u]: [%p]\n", (word32)size, in);
     LogHex(in, 0, size);
     LogStr("out[%u]: [%p]\n", (word32)size, out);
-    LogHex(out, 0, size);
 
     releaseByteArray(env, out_buffer, out, ret);
     releaseByteArray(env,  in_buffer,  in, 1);
@@ -956,7 +950,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesGcmSetKey_1fips__L
 
     LogStr("AesGcmSetKey_fips(aes=%p, key) = %d\n", aes, ret);
     LogStr("key[%u]: [%p]\n", (word32)size, key);
-    LogHex(key, 0, size);
 
 #endif
 
@@ -995,7 +988,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesGcmSetKey_1fips__L
 
     LogStr("AesGcmSetKey_fips(aes=%p, key) = %d\n", aes, ret);
     LogStr("key[%u]: [%p]\n", (word32)size, key);
-    LogHex(key, 0, size);
 
     releaseByteArray(env, key_buffer, key, 1);
 
@@ -1077,7 +1069,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesGcmEncrypt_1fips__
         "AesGcmEncrypt_fips(aes=%p, out, in, iv, authTag, authIn) = %d\n",
         aes, ret);
     LogStr("in[%u]: [%p]\n", (word32)size, in);
-    LogHex(in, 0, size);
     LogStr("out[%u]: [%p]\n", (word32)size, out);
     LogHex(out, 0, size);
     LogStr("iv[%u]: [%p]\n", (word32)ivSz, iv);
@@ -1166,7 +1157,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesGcmEncrypt_1fips__
         "AesGcmEncrypt_fips(aes=%p, out, in, iv, authTag, authIn) = %d\n",
         aes, ret);
     LogStr("in[%u]: [%p]\n", (word32)size, in);
-    LogHex(in, 0, size);
     LogStr("out[%u]: [%p]\n", (word32)size, out);
     LogHex(out, 0, size);
     LogStr("iv[%u]: [%p]\n", (word32)ivSz, iv);
@@ -1234,7 +1224,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesGcmDecrypt_1fips__
     LogStr("in[%u]: [%p]\n", (word32)AES_BLOCK_SIZE, in);
     LogHex(in, 0, AES_BLOCK_SIZE);
     LogStr("out[%u]: [%p]\n", (word32)AES_BLOCK_SIZE, out);
-    LogHex(out, 0, AES_BLOCK_SIZE);
     LogStr("iv[%u]: [%p]\n", (word32)ivSz, iv);
     LogHex(iv, 0, ivSz);
     LogStr("authTag[%u]: [%p]\n", (word32)authTagSz, authTag);
@@ -1296,7 +1285,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesGcmDecrypt_1fips__
     LogStr("in[%u]: [%p]\n", (word32)AES_BLOCK_SIZE, in);
     LogHex(in, 0, AES_BLOCK_SIZE);
     LogStr("out[%u]: [%p]\n", (word32)AES_BLOCK_SIZE, out);
-    LogHex(out, 0, AES_BLOCK_SIZE);
     LogStr("iv[%u]: [%p]\n", (word32)ivSz, iv);
     LogHex(iv, 0, ivSz);
     LogStr("authTag[%u]: [%p]\n", (word32)authTagSz, authTag);
@@ -1348,7 +1336,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1Des3_1SetKey_1fips__L
     LogStr("Des3_SetKey_fips(des=%p, key, iv, %s) = %d\n", des,
         dir ? "dec" : "enc", ret);
     LogStr("key[%u]: [%p]\n", (word32)DES3_KEYLEN, key);
-    LogHex(key, 0, DES3_KEYLEN);
     LogStr("iv[%u]: [%p]\n", (word32)DES3_IVLEN, iv);
     LogHex(iv, 0, DES3_IVLEN);
 
@@ -1386,7 +1373,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1Des3_1SetKey_1fips__L
     LogStr("Des3_SetKey_fips(des=%p, key, iv, %s) = %d\n", des,
         dir ? "dec" : "enc", ret);
     LogStr("key[%u]: [%p]\n", (word32)DES3_KEYLEN, key);
-    LogHex(key, 0, DES3_KEYLEN);
     LogStr("iv[%u]: [%p]\n", (word32)DES3_IVLEN, iv);
     LogHex(iv, 0, DES3_IVLEN);
 
@@ -1495,7 +1481,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1Des3_1CbcEncrypt_1fip
 
     LogStr("Des3_CbcEncrypt_fips(des=%p, out, in) = %d\n", des, ret);
     LogStr("in[%u]: [%p]\n", (word32)size, in);
-    LogHex(in, 0, size);
     LogStr("out[%u]: [%p]\n", (word32)size, out);
     LogHex(out, 0, size);
 
@@ -1533,7 +1518,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1Des3_1CbcEncrypt_1fip
 
     LogStr("Des3_CbcEncrypt_fips(des=%p, out, in) = %d\n", des, ret);
     LogStr("in[%u]: [%p]\n", (word32)size, in);
-    LogHex(in, 0, size);
     LogStr("out[%u]: [%p]\n", (word32)size, out);
     LogHex(out, 0, size);
 
@@ -1577,7 +1561,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1Des3_1CbcDecrypt_1fip
     LogStr("in[%u]: [%p]\n", (word32)size, in);
     LogHex(in, 0, size);
     LogStr("out[%u]: [%p]\n", (word32)size, out);
-    LogHex(out, 0, size);
 
 #endif
 
@@ -1614,7 +1597,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1Des3_1CbcDecrypt_1fip
     LogStr("in[%u]: [%p]\n", (word32)size, in);
     LogHex(in, 0, size);
     LogStr("out[%u]: [%p]\n", (word32)size, out);
-    LogHex(out, 0, size);
 
     releaseByteArray(env, out_buffer, out, ret);
     releaseByteArray(env, in_buffer, in, 1);
@@ -1661,7 +1643,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1HmacSetKey_1fips__Lco
     LogStr("HmacSetKey_fips(hmac=%p, type=%d, key, keySz) = %d\n", hmac, type,
         ret);
     LogStr("key[%u]: [%p]\n", (word32)keySz, key);
-    LogHex(key, 0, keySz);
 
 #endif
 
@@ -1701,7 +1682,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1HmacSetKey_1fips__Lco
     LogStr("HmacSetKey_fips(hmac=%p, type=%d, key, keySz) = %d\n", hmac, type,
         ret);
     LogStr("key[%u]: [%p]\n", (word32)keySz, key);
-    LogHex(key, 0, keySz);
 
     releaseByteArray(env, key_buffer, key, 1);
 
@@ -1740,7 +1720,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1HmacUpdate_1fips__Lco
 
     LogStr("HmacUpdate_fips(hmac=%p, data, len) = %d\n", hmac, ret);
     LogStr("data[%u]: [%p]\n", (word32)len, data);
-    LogHex(data, 0, len);
 
 #endif
 
@@ -1779,7 +1758,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1HmacUpdate_1fips__Lco
 
     LogStr("HmacUpdate_fips(hmac=%p, data, len) = %d\n", hmac, ret);
     LogStr("data[%u]: [%p]\n", (word32)len, data);
-    LogHex(data, 0, len);
 
     releaseByteArray(env, data_buffer, data, 1);
 
@@ -1948,7 +1926,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RNG_1GenerateBlock_1f
 
     LogStr("RNG_GenerateBlock_fips(rng=%p, buf, bufSz) = %d\n", rng, ret);
     LogStr("output[%u]: [%p]\n", (word32)bufSz, buf);
-    LogHex(buf, 0, bufSz);
 
 #endif
 
@@ -1987,7 +1964,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RNG_1GenerateBlock_1f
 
     LogStr("RNG_GenerateBlock_fips(rng=%p, buf, bufSz) = %d\n", rng, ret);
     LogStr("output[%u]: [%p]\n", (word32)bufSz, buf);
-    LogHex(buf, 0, bufSz);
 
     releaseByteArray(env, buf_buffer, buf, ret);
 
@@ -2023,11 +1999,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RNG_1HealthTest_1fips
     LogStr("RNG_HealthTest_fips(reseed=%d, entropyA, entropyASz, "
         "entropyB, entropyBSz, output, outputSz) = %d\n", reseed, ret);
     LogStr("entropyA[%u]: [%p]\n", (word32)entropyASz, entropyA);
-    LogHex((byte*) entropyA, 0, entropyASz);
     LogStr("entropyB[%u]: [%p]\n", (word32)entropyBSz, entropyB);
-    LogHex((byte*) entropyB, 0, entropyBSz);
     LogStr("output[%u]: [%p]\n", (word32)outputSz, output);
-    LogHex(output, 0, outputSz);
 
 #endif
 
@@ -2063,11 +2036,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RNG_1HealthTest_1fips
     LogStr("RNG_HealthTest_fips(reseed=%d, entropyA, entropyASz, "
         "entropyB, entropyBSz, output, outputSz) = %d\n", reseed, ret);
     LogStr("entropyA[%u]: [%p]\n", (word32)entropyASz, entropyA);
-    LogHex((byte*) entropyA, 0, entropyASz);
     LogStr("entropyB[%u]: [%p]\n", (word32)entropyBSz, entropyB);
-    LogHex((byte*) entropyB, 0, entropyBSz);
     LogStr("output[%u]: [%p]\n", (word32)outputSz, output);
-    LogHex(output, 0, outputSz);
 
     releaseByteArray(env, entropyA_object, (byte*)entropyA, 1);
     releaseByteArray(env, entropyB_object, (byte*)entropyB, 1);
@@ -2434,7 +2404,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPrivateKeyDecode_1
     LogStr("RsaPrivateKeyDecode_fips(input, inOutIdx, key=%p, inSz) = %d\n",
         key, ret);
     LogStr("input[%u]: [%p]\n", (word32)inSz, input);
-    LogHex((byte*) input, 0, inSz);
 
 #endif
 
@@ -2485,7 +2454,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPrivateKeyDecode_1
     LogStr("RsaPrivateKeyDecode_fips(input, inOutIdx, key=%p, inSz) = %d\n",
         key, ret);
     LogStr("input[%u]: [%p]\n", (word32)inSz, input);
-    LogHex((byte*) input, 0, inSz);
 
     releaseByteArray(env, input_object, input, 1);
 
@@ -3366,7 +3334,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPublicEncrypt_1fip
         "RsaPublicEncrypt_fips(in, inLen, out, outLen, key=%p, rng=%p) = %d\n",
         key, rng, ret);
     LogStr("in[%u]: [%p]\n", (word32)inLen, in);
-    LogHex((byte*) in, 0, inLen);
     LogStr("out[%u]: [%p]\n", (word32)outLen, out);
     LogHex((byte*) out, 0, outLen);
 
@@ -3422,7 +3389,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPublicEncrypt_1fip
         "RsaPublicEncrypt_fips(in, inLen, out, outLen, key=%p, rng=%p) = %d\n",
         key, rng, ret);
     LogStr("in[%u]: [%p]\n", (word32)inLen, in);
-    LogHex((byte*) in, 0, inLen);
     LogStr("out[%u]: [%p]\n", (word32)outLen, out);
     LogHex((byte*) out, 0, outLen);
 
@@ -3470,7 +3436,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPrivateDecrypt_1fi
     LogStr("in[%u]: [%p]\n", (word32)inLen, in);
     LogHex((byte*) in, 0, inLen);
     LogStr("out[%u]: [%p]\n", (word32)outLen, out);
-    LogHex((byte*) out, 0, outLen);
 
 #endif
 
@@ -3515,7 +3480,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPrivateDecrypt_1fi
     LogStr("in[%u]: [%p]\n", (word32)inLen, in);
     LogHex((byte*) in, 0, inLen);
     LogStr("out[%u]: [%p]\n", (word32)outLen, out);
-    LogHex((byte*) out, 0, outLen);
 
     releaseByteArray(env, in_object, in, 1);
     releaseByteArray(env, out_object, out, ret < 0);
@@ -3776,7 +3740,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1DhGenerateKeyPair__Lc
     LogStr("DhGenerateKeyPair(key=%p, rng=%p, priv, privSz, pub, pubSz) = %d\n",
         key, rng, ret);
     LogStr("priv[%u]: [%p]\n", (word32)tmpPrivSz, priv);
-    LogHex(priv, 0, tmpPrivSz);
     LogStr("pub[%u]: [%p]\n", (word32)tmpPubSz, pub);
     LogHex(pub, 0, tmpPubSz);
 
@@ -3846,7 +3809,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1DhGenerateKeyPair__Lc
     LogStr("DhGenerateKeyPair(key=%p, rng=%p, priv, privSz, pub, pubSz) = %d\n",
         key, rng, ret);
     LogStr("priv[%u]: [%p]\n", (word32)tmpPrivSz, priv);
-    LogHex(priv, 0, tmpPrivSz);
     LogStr("pub[%u]: [%p]\n", (word32)tmpPubSz, pub);
     LogHex(pub, 0, tmpPubSz);
 
@@ -3901,9 +3863,7 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1DhAgree__Lcom_wolfssl
     LogStr("DhAgree(key=%p, agree, agreeSz, priv, privSz, pub, pubSz) = %d\n",
         key, ret);
     LogStr("agree[%u]: [%p]\n", (word32)tmpAgreeSz, agree);
-    LogHex(agree, 0, tmpAgreeSz);
     LogStr("priv[%u]: [%p]\n", (word32)privSz, priv);
-    LogHex(priv, 0, privSz);
     LogStr("pub[%u]: [%p]\n", (word32)pubSz, pub);
     LogHex(pub, 0, pubSz);
 
@@ -3954,9 +3914,7 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1DhAgree__Lcom_wolfssl
     LogStr("DhAgree(key=%p, agree, agreeSz, priv, privSz, pub, pubSz) = %d\n",
         key, ret);
     LogStr("agree[%u]: [%p]\n", (word32)tmpAgreeSz, agree);
-    LogHex(agree, 0, tmpAgreeSz);
     LogStr("priv[%u]: [%p]\n", (word32)privSz, priv);
-    LogHex(priv, 0, privSz);
     LogStr("pub[%u]: [%p]\n", (word32)pubSz, pub);
     LogHex(pub, 0, pubSz);
 
@@ -4364,7 +4322,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1ecc_1shared_1secret__
     LogStr("ecc_shared_secret(priv=%p, pub=%p, out, outLen) = %d\n", priv, pub,
         ret);
     LogStr("out[%u]: [%p]\n", (word32)tmpOutLen, out);
-    LogHex(out, 0, tmpOutLen);
 
 #endif
 
@@ -4415,7 +4372,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1ecc_1shared_1secret__
         (*env)->SetLongArrayRegion(env, outlen, 0, 1, &tmpOutLen);
 
         LogStr("out[%u]: [%p]\n", (word32)tmpOutLen, out);
-        LogHex(out, 0, tmpOutLen);
     }
 
     releaseByteArray(env, out_buffer, out, ret);

@@ -198,7 +198,6 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_AesCmac_wc_1CmacUpdate___3BII(
 
     LogStr("wc_CmacUpdate(cmac=%p, data, length) = %d\n", cmac, ret);
     LogStr("data[%u]: [%p]\n", (word32)length, data + offset);
-    LogHex((byte*) data, offset, length);
 
     releaseByteArray(env, data_object, data, JNI_ABORT);
 #else
@@ -237,7 +236,6 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_AesCmac_wc_1CmacUpdate__Ljava_
 
     LogStr("wc_CmacUpdate(cmac=%p, data, length) = %d\n", cmac, ret);
     LogStr("data[%u]: [%p]\n", (word32)length, data + offset);
-    LogHex((byte*) data, offset, length);
 #else
     throwNotCompiledInException(env);
 #endif
@@ -278,7 +276,6 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_AesCmac_wc_1CmacFinal(
 
     LogStr("wc_CmacFinal(cmac=%p, result) = %d\n", cmac, ret);
     LogStr("result[%u]: [%p]\n", (word32)macSz, tmp);
-    LogHex(tmp, 0, macSz);
     #if (LIBWOLFSSL_VERSION_HEX >= 0x05008004) && \
         !defined(WOLFSSL_NO_FORCE_ZERO)
         wc_ForceZero(tmp, sizeof(tmp));
@@ -406,7 +403,6 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_AesCmac_wc_1AesCmacVerify(
 
     LogStr("wc_AesCmacVerify(mac=%p, macSz=%d, data=%p, dataSz=%d, "
         "key=%p, keySz=%d) = %d\n", mac, macSz, data, dataSz, key, keySz, ret);
-    LogHex(mac, 0, macSz);
 
     releaseByteArray(env, mac_object, mac, JNI_ABORT);
     releaseByteArray(env, data_object, data, JNI_ABORT);
