@@ -389,6 +389,7 @@ add_library(wolfcryptjni SHARED
         ${wolfcryptjni_DIR}/jni/jni_rng.c
         ${wolfcryptjni_DIR}/jni/jni_rsa.c
         ${wolfcryptjni_DIR}/jni/jni_sha.c
+        ${wolfcryptjni_DIR}/jni/jni_shake.c
         ${wolfcryptjni_DIR}/jni/jni_wolfcrypt.c
         ${wolfcryptjni_DIR}/jni/jni_wolfobject.c
         ${wolfcryptjni_DIR}/jni/jni_wolfssl_cert_manager.c
