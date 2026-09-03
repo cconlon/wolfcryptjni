@@ -36,6 +36,7 @@ import com.wolfssl.wolfcrypt.FeatureDetect;
 import com.wolfssl.wolfcrypt.SlhDsa;
 import com.wolfssl.wolfcrypt.Rng;
 import com.wolfssl.wolfcrypt.Sha256;
+import com.wolfssl.wolfcrypt.Sha384;
 import com.wolfssl.wolfcrypt.Sha512;
 import com.wolfssl.wolfcrypt.WolfCrypt;
 import com.wolfssl.wolfcrypt.WolfCryptError;
@@ -766,20 +767,17 @@ public class SlhDsaTest {
 
         byte[] msg = "pre-hash pairing check".getBytes();
 
-        /* Independently validate the FIPS 205 Section 10.2.2 pre-hash pairing
-         * for the SHA2 sets. signPreHash() chooses the hash in native C. Here
-         * we reconstruct the expected digest and hashType in Java and confirm
-         * the signature verifies through the explicit-digest verifyHash()
-         * path, then that the other SHA-2 hash does NOT verify. Sign and verify
-         * do not share the digest helper, so a wrong-but-consistent pairing is
-         * caught (128-bit sets use SHA-256, 192/256-bit sets use SHA-512). The
-         * SHAKE sets cannot be cross-checked here (no Java SHAKE digest). */
+        /* Confirm the pre-hash signPreHash() picks natively (SHA-256 for
+         * 128-bit sets, SHA-512 for 192/256-bit) by verifying with the
+         * expected digest, then with a mismatched one. The mismatch must be
+         * at least as strong as the set, weaker hashes are rejected with
+         * BAD_FUNC_ARG. SHAKE sets are not checked (no Java SHAKE digest). */
         checkSha2Pairing(SlhDsa.SLH_DSA_SHA2_128F, msg,
             sha256(msg), WolfCrypt.WC_HASH_TYPE_SHA256,
             sha512(msg), WolfCrypt.WC_HASH_TYPE_SHA512);
         checkSha2Pairing(SlhDsa.SLH_DSA_SHA2_192F, msg,
             sha512(msg), WolfCrypt.WC_HASH_TYPE_SHA512,
-            sha256(msg), WolfCrypt.WC_HASH_TYPE_SHA256);
+            sha384(msg), WolfCrypt.WC_HASH_TYPE_SHA384);
     }
 
     @Test
@@ -884,6 +882,12 @@ public class SlhDsaTest {
 
     private static byte[] sha256(byte[] in) {
         Sha256 sha = new Sha256();
+        sha.update(in);
+        return sha.digest();
+    }
+
+    private static byte[] sha384(byte[] in) {
+        Sha384 sha = new Sha384();
         sha.update(in);
         return sha.digest();
     }
