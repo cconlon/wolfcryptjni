@@ -547,6 +547,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesSetKey_1fips__Lcom
     Aes* aes  = NULL;
     byte* key = NULL;
     byte* iv  = NULL;
+    word32 keySz = 0;
+    jboolean keyIsCopy = JNI_FALSE;
 
     aes = (Aes*) getNativeStruct(env, aes_object);
     if ((*env)->ExceptionOccurred(env)) {
@@ -554,7 +556,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesSetKey_1fips__Lcom
         return BAD_FUNC_ARG;
     }
 
-    key = getByteArray(env, key_buffer);
+    key = getByteArrayIsCopy(env, key_buffer, &keyIsCopy);
+    keySz = getByteArrayLength(env, key_buffer);
     iv  = getByteArray(env, iv_buffer);
 
     if (aes == NULL || key == NULL) {
@@ -575,7 +578,7 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesSetKey_1fips__Lcom
     LogStr("iv[%u]: [%p]\n", (word32)AES_BLOCK_SIZE, iv);
     LogHex(iv, 0, AES_BLOCK_SIZE);
 
-    releaseByteArray(env, key_buffer, key, 1);
+    releaseByteArrayZeroize(env, key_buffer, key, keySz, keyIsCopy, 1);
     releaseByteArray(env,  iv_buffer,  iv, 1);
 
 #endif
@@ -959,6 +962,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesGcmSetKey_1fips__L
 
     Aes*  aes = NULL;
     byte* key = NULL;
+    word32 keySz = 0;
+    jboolean keyIsCopy = JNI_FALSE;
 
     aes = (Aes*) getNativeStruct(env, aes_object);
     if ((*env)->ExceptionOccurred(env)) {
@@ -966,7 +971,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesGcmSetKey_1fips__L
         return BAD_FUNC_ARG;
     }
 
-    key = getByteArray(env, key_buffer);
+    key = getByteArrayIsCopy(env, key_buffer, &keyIsCopy);
+    keySz = getByteArrayLength(env, key_buffer);
 
     if (aes == NULL || key == NULL) {
         ret = BAD_FUNC_ARG;
@@ -983,7 +989,7 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1AesGcmSetKey_1fips__L
     LogStr("key[%u]: [%p]\n", (word32)size, key);
     LogHex(key, 0, size);
 
-    releaseByteArray(env, key_buffer, key, 1);
+    releaseByteArrayZeroize(env, key_buffer, key, keySz, keyIsCopy, 1);
 
 #endif
 
@@ -1356,6 +1362,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1Des3_1SetKey_1fips__L
     Des3* des = NULL;
     byte* key = NULL;
     byte* iv  = NULL;
+    word32 keySz = 0;
+    jboolean keyIsCopy = JNI_FALSE;
 
     des = (Des3*) getNativeStruct(env, des_object);
     if ((*env)->ExceptionOccurred(env)) {
@@ -1363,7 +1371,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1Des3_1SetKey_1fips__L
         return BAD_FUNC_ARG;
     }
 
-    key = getByteArray(env, key_buffer);
+    key = getByteArrayIsCopy(env, key_buffer, &keyIsCopy);
+    keySz = getByteArrayLength(env, key_buffer);
     iv  = getByteArray(env, iv_buffer);
 
     ret = (!des || !key) ? BAD_FUNC_ARG
@@ -1376,7 +1385,7 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1Des3_1SetKey_1fips__L
     LogStr("iv[%u]: [%p]\n", (word32)DES3_IVLEN, iv);
     LogHex(iv, 0, DES3_IVLEN);
 
-    releaseByteArray(env, key_buffer, key, 1);
+    releaseByteArrayZeroize(env, key_buffer, key, keySz, keyIsCopy, 1);
     releaseByteArray(env, iv_buffer, iv, 1);
 
 #endif
@@ -1664,6 +1673,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1HmacSetKey_1fips__Lco
 
     Hmac* hmac = NULL;
     byte* key  = NULL;
+    word32 keyLen = 0;
+    jboolean keyIsCopy = JNI_FALSE;
 
     hmac = (Hmac*) getNativeStruct(env, hmac_object);
     if ((*env)->ExceptionOccurred(env)) {
@@ -1671,7 +1682,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1HmacSetKey_1fips__Lco
         return BAD_FUNC_ARG;
     }
 
-    key = getByteArray(env, key_buffer);
+    key = getByteArrayIsCopy(env, key_buffer, &keyIsCopy);
+    keyLen = getByteArrayLength(env, key_buffer);
 
     if (hmac == NULL || key == NULL) {
         ret = BAD_FUNC_ARG;
@@ -1689,7 +1701,7 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1HmacSetKey_1fips__Lco
     LogStr("key[%u]: [%p]\n", (word32)keySz, key);
     LogHex(key, 0, keySz);
 
-    releaseByteArray(env, key_buffer, key, 1);
+    releaseByteArrayZeroize(env, key_buffer, key, keyLen, keyIsCopy, 1);
 
 #endif
 
@@ -1951,6 +1963,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RNG_1GenerateBlock_1f
 
     RNG*  rng = NULL;
     byte* buf = NULL;
+    word32 bufLen = 0;
+    jboolean bufIsCopy = JNI_FALSE;
 
     rng = (RNG*) getNativeStruct(env, rng_object);
     if ((*env)->ExceptionOccurred(env)) {
@@ -1958,7 +1972,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RNG_1GenerateBlock_1f
         return BAD_FUNC_ARG;
     }
 
-    buf = getByteArray(env, buf_buffer);
+    buf = getByteArrayIsCopy(env, buf_buffer, &bufIsCopy);
+    bufLen = getByteArrayLength(env, buf_buffer);
 
     if (rng == NULL || buf == NULL) {
         ret = BAD_FUNC_ARG;
@@ -1975,7 +1990,7 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RNG_1GenerateBlock_1f
     LogStr("output[%u]: [%p]\n", (word32)bufSz, buf);
     LogHex(buf, 0, bufSz);
 
-    releaseByteArray(env, buf_buffer, buf, ret);
+    releaseByteArrayZeroize(env, buf_buffer, buf, bufLen, bufIsCopy, ret);
 
 #endif
 
@@ -2029,9 +2044,17 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RNG_1HealthTest_1fips
 
 #if defined(HAVE_FIPS)
 
-    const byte* entropyA = getByteArray(env, entropyA_object);
-    const byte* entropyB = getByteArray(env, entropyB_object);
-    byte* output = getByteArray(env, output_object);
+    jboolean entropyAIsCopy = JNI_FALSE;
+    jboolean entropyBIsCopy = JNI_FALSE;
+    jboolean outputIsCopy = JNI_FALSE;
+    const byte* entropyA = getByteArrayIsCopy(env, entropyA_object,
+        &entropyAIsCopy);
+    const byte* entropyB = getByteArrayIsCopy(env, entropyB_object,
+        &entropyBIsCopy);
+    byte* output = getByteArrayIsCopy(env, output_object, &outputIsCopy);
+    word32 entropyALen = getByteArrayLength(env, entropyA_object);
+    word32 entropyBLen = getByteArrayLength(env, entropyB_object);
+    word32 outputLen = getByteArrayLength(env, output_object);
 
     if (!entropyA || (reseed && !entropyB) || !output) {
         ret = BAD_FUNC_ARG;
@@ -2055,9 +2078,12 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RNG_1HealthTest_1fips
     LogStr("output[%u]: [%p]\n", (word32)outputSz, output);
     LogHex(output, 0, outputSz);
 
-    releaseByteArray(env, entropyA_object, (byte*)entropyA, 1);
-    releaseByteArray(env, entropyB_object, (byte*)entropyB, 1);
-    releaseByteArray(env, output_object, output, ret);
+    releaseByteArrayZeroize(env, entropyA_object, (byte*)entropyA,
+        entropyALen, entropyAIsCopy, 1);
+    releaseByteArrayZeroize(env, entropyB_object, (byte*)entropyB,
+        entropyBLen, entropyBIsCopy, 1);
+    releaseByteArrayZeroize(env, output_object, output, outputLen,
+        outputIsCopy, ret);
 
 #endif
 
@@ -2438,6 +2464,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPrivateKeyDecode_1
     jlong tmpIdx;
     word32 tmpIdx32;
     byte* input = NULL;
+    word32 inputLen = 0;
+    jboolean inputIsCopy = JNI_FALSE;
     RsaKey* key = NULL;
 
     key = (RsaKey*) getNativeStruct(env, rsa_object);
@@ -2446,11 +2474,13 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPrivateKeyDecode_1
         return BAD_FUNC_ARG;
     }
 
-    input = getByteArray(env, input_object);
+    input = getByteArrayIsCopy(env, input_object, &inputIsCopy);
+    inputLen = getByteArrayLength(env, input_object);
 
     (*env)->GetLongArrayRegion(env, inOutIdx, 0, 1, &tmpIdx);
     if ((*env)->ExceptionOccurred(env)) {
-        releaseByteArray(env, input_object, input, 1);
+        releaseByteArrayZeroize(env, input_object, input, inputLen,
+            inputIsCopy, 1);
         return BAD_FUNC_ARG;
     }
     tmpIdx32 = (word32)tmpIdx;
@@ -2473,7 +2503,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPrivateKeyDecode_1
     LogStr("input[%u]: [%p]\n", (word32)inSz, input);
     LogHex((byte*) input, 0, inSz);
 
-    releaseByteArray(env, input_object, input, 1);
+    releaseByteArrayZeroize(env, input_object, input, inputLen,
+        inputIsCopy, 1);
 
 #endif
 
@@ -3371,6 +3402,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPublicEncrypt_1fip
 
     byte* in    = NULL;
     byte* out   = NULL;
+    word32 inSz = 0;
+    jboolean inIsCopy = JNI_FALSE;
     RsaKey* key = NULL;
     RNG* rng    = NULL;
 
@@ -3384,7 +3417,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPublicEncrypt_1fip
         return BAD_FUNC_ARG;
     }
 
-    in  = getByteArray(env, in_object);
+    in  = getByteArrayIsCopy(env, in_object, &inIsCopy);
+    inSz = getByteArrayLength(env, in_object);
     out = getByteArray(env, out_object);
 
     /**
@@ -3412,7 +3446,7 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPublicEncrypt_1fip
     LogStr("out[%u]: [%p]\n", (word32)outLen, out);
     LogHex((byte*) out, 0, outLen);
 
-    releaseByteArray(env, in_object, in, 1);
+    releaseByteArrayZeroize(env, in_object, in, inSz, inIsCopy, 1);
     releaseByteArray(env, out_object, out, ret < 0);
 
 #endif
@@ -3473,6 +3507,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPrivateDecrypt_1fi
 
     byte* in = NULL;
     byte* out = NULL;
+    word32 outSz = 0;
+    jboolean outIsCopy = JNI_FALSE;
     RsaKey* key = NULL;
 
     key = (RsaKey*) getNativeStruct(env, rsa_object);
@@ -3481,7 +3517,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPrivateDecrypt_1fi
     }
 
     in  = getByteArray(env, in_object);
-    out = getByteArray(env, out_object);
+    out = getByteArrayIsCopy(env, out_object, &outIsCopy);
+    outSz = getByteArrayLength(env, out_object);
 
     if (in == NULL || out == NULL) {
         ret = BAD_FUNC_ARG;
@@ -3504,7 +3541,7 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1RsaPrivateDecrypt_1fi
     LogHex((byte*) out, 0, outLen);
 
     releaseByteArray(env, in_object, in, 1);
-    releaseByteArray(env, out_object, out, ret < 0);
+    releaseByteArrayZeroize(env, out_object, out, outSz, outIsCopy, ret < 0);
 
 #endif
 
@@ -3784,6 +3821,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1DhGenerateKeyPair__Lc
     RNG*  rng  = NULL;
     byte* priv = NULL;
     byte* pub  = NULL;
+    word32 privLen = 0;
+    jboolean privIsCopy = JNI_FALSE;
     jlong tmpPrivSz, tmpPubSz;
     word32 tmpPrivSz32, tmpPubSz32;
 
@@ -3810,7 +3849,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1DhGenerateKeyPair__Lc
     tmpPrivSz32 = (word32)tmpPrivSz;
     tmpPubSz32  = (word32)tmpPubSz;
 
-    priv = getByteArray(env, priv_buffer);
+    priv = getByteArrayIsCopy(env, priv_buffer, &privIsCopy);
+    privLen = getByteArrayLength(env, priv_buffer);
     pub  = getByteArray(env, pub_buffer);
 
     ret = (!priv || !pub)
@@ -3822,7 +3862,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1DhGenerateKeyPair__Lc
 
     (*env)->SetLongArrayRegion(env, privSz, 0, 1, &tmpPrivSz);
     if ((*env)->ExceptionOccurred(env)) {
-        releaseByteArray(env, priv_buffer, priv, ret < 0);
+        releaseByteArrayZeroize(env, priv_buffer, priv, privLen, privIsCopy,
+            ret < 0);
         releaseByteArray(env, pub_buffer, pub, ret < 0);
         return BAD_FUNC_ARG;
     }
@@ -3836,7 +3877,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1DhGenerateKeyPair__Lc
     LogStr("pub[%u]: [%p]\n", (word32)tmpPubSz, pub);
     LogHex(pub, 0, tmpPubSz);
 
-    releaseByteArray(env, priv_buffer, priv, ret < 0);
+    releaseByteArrayZeroize(env, priv_buffer, priv, privLen, privIsCopy,
+        ret < 0);
     releaseByteArray(env, pub_buffer, pub, ret < 0);
 
 #endif
@@ -3911,6 +3953,10 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1DhAgree__Lcom_wolfssl
     byte* agree = NULL;
     byte* priv  = NULL;
     byte* pub   = NULL;
+    word32 agreeLen = 0;
+    word32 privLen = 0;
+    jboolean agreeIsCopy = JNI_FALSE;
+    jboolean privIsCopy = JNI_FALSE;
     jlong tmpAgreeSz;
     word32 tmpAgreeSz32;
 
@@ -3925,9 +3971,11 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1DhAgree__Lcom_wolfssl
     }
     tmpAgreeSz32 = (word32)tmpAgreeSz;
 
-    agree = getByteArray(env, agree_buffer);
-    priv  = getByteArray(env, priv_buffer);
+    agree = getByteArrayIsCopy(env, agree_buffer, &agreeIsCopy);
+    priv  = getByteArrayIsCopy(env, priv_buffer, &privIsCopy);
     pub   = getByteArray(env, pub_buffer);
+    agreeLen = getByteArrayLength(env, agree_buffer);
+    privLen = getByteArrayLength(env, priv_buffer);
 
     ret = (!key || !agree || !priv || !pub)
         ? BAD_FUNC_ARG
@@ -3946,8 +3994,9 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1DhAgree__Lcom_wolfssl
     LogStr("pub[%u]: [%p]\n", (word32)pubSz, pub);
     LogHex(pub, 0, pubSz);
 
-    releaseByteArray(env, agree_buffer, agree, ret < 0);
-    releaseByteArray(env, priv_buffer, priv, 1);
+    releaseByteArrayZeroize(env, agree_buffer, agree, agreeLen, agreeIsCopy,
+        ret < 0);
+    releaseByteArrayZeroize(env, priv_buffer, priv, privLen, privIsCopy, 1);
     releaseByteArray(env, pub_buffer, pub, 1);
 
 #endif
@@ -4007,6 +4056,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1DhKeyDecode___3B_3JLc
 
     DhKey* key  = NULL;
     byte* input = NULL;
+    word32 inputLen = 0;
+    jboolean inputIsCopy = JNI_FALSE;
     jlong tmpInOutIdx;
     word32 tmpInOutIdx32;
 
@@ -4021,7 +4072,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1DhKeyDecode___3B_3JLc
     }
     tmpInOutIdx32 = (word32)tmpInOutIdx;
 
-    input = getByteArray(env, input_buffer);
+    input = getByteArrayIsCopy(env, input_buffer, &inputIsCopy);
+    inputLen = getByteArrayLength(env, input_buffer);
     ret = (!input)
         ? BAD_FUNC_ARG
         : wc_DhKeyDecode(input, &tmpInOutIdx32, key, (word32)inSz);
@@ -4033,7 +4085,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1DhKeyDecode___3B_3JLc
     LogStr("input[%u]: [%p]\n", (word32)inSz, input);
     LogHex(input, 0, inSz);
 
-    releaseByteArray(env, input_buffer, input, 1);
+    releaseByteArrayZeroize(env, input_buffer, input, inputLen,
+        inputIsCopy, 1);
 
 #endif
 
@@ -4368,6 +4421,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1ecc_1shared_1secret__
     ecc_key* priv = NULL;
     ecc_key* pub  = NULL;
     byte* out = NULL;
+    word32 outSz = 0;
+    jboolean outIsCopy = JNI_FALSE;
     jlong tmpOutLen;
     word32 tmpOutLen32;
 
@@ -4384,13 +4439,14 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1ecc_1shared_1secret__
     LogStr("wc_ecc_shared_secret(priv=%p, pub=%p, out, outLen) = %d\n", priv,
         pub, ret);
 
-    out = getByteArray(env, out_buffer);
+    out = getByteArrayIsCopy(env, out_buffer, &outIsCopy);
+    outSz = getByteArrayLength(env, out_buffer);
     if (!out)
         ret = BAD_FUNC_ARG;
     else {
         (*env)->GetLongArrayRegion(env, outlen, 0, 1, &tmpOutLen);
         if ((*env)->ExceptionOccurred(env)) {
-            releaseByteArray(env, out_buffer, out, 1);
+            releaseByteArrayZeroize(env, out_buffer, out, outSz, outIsCopy, 1);
             return BAD_FUNC_ARG;
         }
         tmpOutLen32 = (word32)tmpOutLen;
@@ -4404,7 +4460,7 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Fips_wc_1ecc_1shared_1secret__
         LogHex(out, 0, tmpOutLen);
     }
 
-    releaseByteArray(env, out_buffer, out, ret);
+    releaseByteArrayZeroize(env, out_buffer, out, outSz, outIsCopy, ret);
 
 #endif
 
