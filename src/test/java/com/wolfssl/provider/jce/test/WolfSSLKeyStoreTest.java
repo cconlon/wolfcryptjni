@@ -45,6 +45,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FilterInputStream;
+import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -2253,6 +2255,29 @@ public class WolfSSLKeyStoreTest {
         assertEquals(2, store.size());
     }
 
+    /**
+     * A WKS stream that returns fewer bytes than requested per read, as a
+     * socket or pipe may, must still load in full, both without a password
+     * (stream read directly) and with one (HMAC computed over the same bytes).
+     */
+    @Test
+    public void testLoadWKSFromPartialReadStream() throws Exception {
+
+        char[][] passwords = { null, storePass.toCharArray() };
+
+        for (char[] pass : passwords) {
+            KeyStore store = KeyStore.getInstance(storeType, storeProvider);
+            FileInputStream fis = new FileInputStream(clientWKS);
+            try {
+                store.load(new TrickleInputStream(fis), pass);
+            }
+            finally {
+                fis.close();
+            }
+            assertEquals(2, store.size());
+        }
+    }
+
     @Test
     public void testStoreToByteArrayThreaded()
         throws KeyStoreException, IOException, FileNotFoundException,
@@ -3967,5 +3992,17 @@ public class WolfSSLKeyStoreTest {
 
         return false;
     }
-}
 
+    /* Returns at most one byte per bulk read to simulate a slow stream */
+    private static class TrickleInputStream extends FilterInputStream {
+
+        TrickleInputStream(InputStream in) {
+            super(in);
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            return super.read(b, off, Math.min(len, 1));
+        }
+    }
+}
