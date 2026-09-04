@@ -21,7 +21,12 @@
 
 package com.wolfssl.wolfcrypt;
 
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 /**
  * Main wrapper for the native WolfCrypt implementation
@@ -131,7 +136,7 @@ public class WolfCrypt extends WolfObject {
     private static native int getWC_HASH_TYPE_SHA3_512();
     private static native byte[] wcBase16Encode(byte[] input);
     private static native byte[] wcBase16Decode(byte[] input);
-    private static native byte[] wcKeyPemToDer(byte[] pem, String password);
+    private static native byte[] wcKeyPemToDer(byte[] pem, byte[] password);
     private static native byte[] wcCertPemToDer(byte[] pem);
     private static native byte[] wcPubKeyPemToDer(byte[] pem);
     private static native void nativeSetIOTimeout(int timeoutSec);
@@ -337,7 +342,10 @@ public class WolfCrypt extends WolfObject {
     /**
      * Convert private key from PEM to DER format.
      *
-     * Wraps native wc_KeyPemToDer() function.
+     * Wraps native wc_KeyPemToDer() function. The password is passed to
+     * native as standard UTF-8 and may not contain a NUL character. A String
+     * password cannot be erased from the Java heap after use, callers holding
+     * a password should prefer {@link #encryptedKeyPemToDer(byte[], char[])}.
      *
      * @param pem PEM-encoded private key as byte array
      * @param password password for encrypted PEM, or null if unencrypted
@@ -352,11 +360,93 @@ public class WolfCrypt extends WolfObject {
     public static byte[] keyPemToDer(byte[] pem, String password)
         throws WolfCryptException {
 
-        if (pem == null || pem.length == 0) {
-            throw new WolfCryptException("PEM input is null or empty");
+        byte[] pw = null;
+
+        if (password != null) {
+            pw = password.getBytes(StandardCharsets.UTF_8);
         }
 
-        return wcKeyPemToDer(pem, password);
+        return keyPemToDerBytes(pem, pw);
+    }
+
+    /**
+     * Convert a private key from PEM to DER format using a password the
+     * caller can erase afterwards. An unencrypted key is accepted with a
+     * null password.
+     *
+     * Wraps native wc_KeyPemToDer() function. The password is encoded as
+     * UTF-8, may not contain a NUL character, and temporary copies are zeroed
+     * after use. The array passed in is left unchanged so the caller can
+     * clear it if desired.
+     *
+     * @param pem PEM-encoded private key as byte array
+     * @param password password for encrypted PEM, or null if unencrypted
+     *
+     * @return DER-encoded private key as byte array
+     *
+     * @throws WolfCryptException if conversion fails, input is larger than
+     *         the 1 MB maximum PEM size, native operation encounters an
+     *         error, or native ASN/PEM support is not compiled in
+     *         (NO_ASN or WOLFSSL_NO_PEM defined)
+     */
+    public static byte[] encryptedKeyPemToDer(byte[] pem, char[] password)
+        throws WolfCryptException {
+
+        return keyPemToDerBytes(pem, passwordToBytes(password));
+    }
+
+    /* Shared native call, UTF-8 password bytes are zeroed afterwards */
+    private static byte[] keyPemToDerBytes(byte[] pem, byte[] password)
+        throws WolfCryptException {
+
+        try {
+            if (pem == null || pem.length == 0) {
+                throw new WolfCryptException("PEM input is null or empty");
+            }
+            return wcKeyPemToDer(pem, password);
+        }
+        finally {
+            if (password != null) {
+                Arrays.fill(password, (byte)0);
+            }
+        }
+    }
+
+    /* UTF-8 encode a password without creating a String. A null input
+     * returns null. */
+    private static byte[] passwordToBytes(char[] pass) {
+
+        byte[] out = null;
+        ByteBuffer utf8 = null;
+        CharsetEncoder encoder = null;
+
+        if (pass == null) {
+            return null;
+        }
+
+        encoder = StandardCharsets.UTF_8.newEncoder()
+            .onMalformedInput(CodingErrorAction.REPLACE)
+            .onUnmappableCharacter(CodingErrorAction.REPLACE);
+
+        utf8 = ByteBuffer.allocate(
+            (int)Math.ceil(pass.length * (double)encoder.maxBytesPerChar()));
+
+        /* Sized by maxBytesPerChar() and replace never errors, so anything
+         * but underflow means the encoder contract changed */
+        if (!encoder.encode(CharBuffer.wrap(pass), utf8, true).isUnderflow()
+            || !encoder.flush(utf8).isUnderflow()) {
+            Arrays.fill(utf8.array(), (byte)0);
+            throw new WolfCryptException("Password UTF-8 encoding failed");
+        }
+        utf8.flip();
+
+        out = new byte[utf8.remaining()];
+        utf8.get(out);
+
+        /* Encoder buffer holds another copy */
+        Arrays.fill(utf8.array(), (byte)0);
+
+        return out;
     }
 
     /**

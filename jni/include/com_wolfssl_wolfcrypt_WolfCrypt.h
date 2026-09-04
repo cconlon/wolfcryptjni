@@ -176,10 +176,10 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_WolfCrypt_wcBase16Decode
 /*
  * Class:     com_wolfssl_wolfcrypt_WolfCrypt
  * Method:    wcKeyPemToDer
- * Signature: ([BLjava/lang/String;)[B
+ * Signature: ([B[B)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_WolfCrypt_wcKeyPemToDer
-  (JNIEnv *, jclass, jbyteArray, jstring);
+  (JNIEnv *, jclass, jbyteArray, jbyteArray);
 
 /*
  * Class:     com_wolfssl_wolfcrypt_WolfCrypt
