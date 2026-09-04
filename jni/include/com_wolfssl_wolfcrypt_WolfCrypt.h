@@ -45,6 +45,8 @@ extern "C" {
 #define com_wolfssl_wolfcrypt_WolfCrypt_WOLFSSL_OCSP_CHECKALL 4L
 #undef com_wolfssl_wolfcrypt_WolfCrypt_MAX_IO_TIMEOUT_SEC
 #define com_wolfssl_wolfcrypt_WolfCrypt_MAX_IO_TIMEOUT_SEC 3600L
+#undef com_wolfssl_wolfcrypt_WolfCrypt_MAX_PEM_PASSWORD_SIZE
+#define com_wolfssl_wolfcrypt_WolfCrypt_MAX_PEM_PASSWORD_SIZE 65536L
 /*
  * Class:     com_wolfssl_wolfcrypt_WolfCrypt
  * Method:    getWC_HASH_TYPE_NONE
@@ -176,10 +178,10 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_WolfCrypt_wcBase16Decode
 /*
  * Class:     com_wolfssl_wolfcrypt_WolfCrypt
  * Method:    wcKeyPemToDer
- * Signature: ([BLjava/lang/String;)[B
+ * Signature: ([B[B)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_WolfCrypt_wcKeyPemToDer
-  (JNIEnv *, jclass, jbyteArray, jstring);
+  (JNIEnv *, jclass, jbyteArray, jbyteArray);
 
 /*
  * Class:     com_wolfssl_wolfcrypt_WolfCrypt
