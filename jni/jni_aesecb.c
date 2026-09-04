@@ -69,6 +69,7 @@ Java_com_wolfssl_wolfcrypt_AesEcb_native_1set_1key_1internal(
     Aes* aes  = NULL;
     byte* key = NULL;
     word32 keySz = 0;
+    jboolean keyIsCopy = JNI_FALSE;
 
     aes = (Aes*) getNativeStruct(env, this);
     if ((*env)->ExceptionOccurred(env)) {
@@ -76,7 +77,7 @@ Java_com_wolfssl_wolfcrypt_AesEcb_native_1set_1key_1internal(
         return;
     }
 
-    key = getByteArray(env, key_object);
+    key = getByteArrayIsCopy(env, key_object, &keyIsCopy);
     keySz = getByteArrayLength(env, key_object);
 
     /* ECB mode doesn't use IV, so iv_object is ignored */
@@ -95,7 +96,7 @@ Java_com_wolfssl_wolfcrypt_AesEcb_native_1set_1key_1internal(
     LogStr("wc_AesSetKey(aes=%p, key=%p, iv=NULL, opmode=%d) = %d\n",
         aes, key, opmode, ret);
 
-    releaseByteArray(env, key_object, key, JNI_ABORT);
+    releaseByteArrayZeroize(env, key_object, key, keySz, keyIsCopy, JNI_ABORT);
 #else
     throwNotCompiledInException(env);
 #endif /* !NO_AES && HAVE_AES_ECB */
