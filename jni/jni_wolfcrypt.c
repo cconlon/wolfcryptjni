@@ -38,6 +38,7 @@
 #include <wolfssl/wolfio.h>
 #include <com_wolfssl_wolfcrypt_WolfCrypt.h>
 #include <wolfcrypt_jni_error.h>
+#include <wolfcrypt_jni_NativeStruct.h>
 
 /* #define WOLFCRYPT_JNI_DEBUG_ON */
 #include <wolfcrypt_jni_debug.h>
@@ -377,6 +378,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_WolfCrypt_wcKeyPemToDer
     byte* der = NULL;
     const char* password = NULL;
     jboolean pwIsCopy = JNI_FALSE;
+    jboolean pemIsCopy = JNI_FALSE;
     jbyteArray derArr = NULL;
     (void)jcl;
 
@@ -396,7 +398,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_WolfCrypt_wcKeyPemToDer
     }
 
     if (ret == 0) {
-        pem = (byte*)(*env)->GetByteArrayElements(env, pemArr, NULL);
+        pem = (byte*)(*env)->GetByteArrayElements(env, pemArr, &pemIsCopy);
         if (pem == NULL) {
             ret = BAD_FUNC_ARG;
         }
@@ -448,6 +450,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_wolfssl_wolfcrypt_WolfCrypt_wcKeyPemToDer
     }
 
     if (pem != NULL) {
+        zeroizeByteArrayCopy(pem, pemSz, pemIsCopy);
         (*env)->ReleaseByteArrayElements(env, pemArr, (jbyte*)pem, JNI_ABORT);
     }
     if (password != NULL) {
