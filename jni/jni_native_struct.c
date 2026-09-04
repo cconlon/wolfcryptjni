@@ -234,6 +234,22 @@ void zeroizeByteArrayCopy(byte* buf, word32 sz, jboolean isCopy)
     }
 }
 
+/* Release a byte array. Copy the result back unless abort is set, then
+ * zeroize the native copy, if any, before it is freed */
+void releaseByteArrayZeroize(JNIEnv* env, jbyteArray array, byte* elements,
+    word32 sz, jboolean isCopy, jint abort)
+{
+    if (env == NULL || array == NULL || elements == NULL) {
+        return;
+    }
+    if (!abort) {
+        (*env)->ReleaseByteArrayElements(env, array, (jbyte*)elements,
+            JNI_COMMIT);
+    }
+    zeroizeByteArrayCopy(elements, sz, isCopy);
+    (*env)->ReleaseByteArrayElements(env, array, (jbyte*)elements, JNI_ABORT);
+}
+
 void releaseByteArray(JNIEnv* env, jbyteArray array, byte* elements, jint abort)
 {
     if ((env != NULL) && (array != NULL) && (elements != NULL)) {
