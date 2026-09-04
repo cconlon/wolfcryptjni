@@ -1821,7 +1821,7 @@ public class WolfCryptSignatureTest {
 
         if (!FeatureDetect.RsaPssLongSaltEnabled()) {
             System.out.println("\tSkipping max salt lengths, " +
-                "WOLFSSL_PSS_LONG_SALT not compiled in");
+                "long PSS salts not supported by native wolfSSL");
             return;
         }
 
@@ -2218,7 +2218,7 @@ public class WolfCryptSignatureTest {
         /* Uses the maximum salt length for each digest */
         if (!FeatureDetect.RsaPssLongSaltEnabled()) {
             System.out.println(
-                "\tSkipping, WOLFSSL_PSS_LONG_SALT not compiled in");
+                "\tSkipping, long PSS salts not supported by native wolfSSL");
             return;
         }
 

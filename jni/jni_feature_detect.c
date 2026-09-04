@@ -527,7 +527,11 @@ JNIEXPORT jboolean JNICALL Java_com_wolfssl_wolfcrypt_FeatureDetect_RsaPssLongSa
 {
     (void)env;
     (void)jcl;
-#if !defined(NO_RSA) && defined(WC_RSA_PSS) && defined(WOLFSSL_PSS_LONG_SALT)
+/* FIPS v7 and later cap the PSS salt at the digest length, even when
+ * WOLFSSL_PSS_LONG_SALT is defined */
+#if !defined(NO_RSA) && defined(WC_RSA_PSS) && \
+    defined(WOLFSSL_PSS_LONG_SALT) && \
+    !(defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION >= 7))
     return JNI_TRUE;
 #else
     return JNI_FALSE;
