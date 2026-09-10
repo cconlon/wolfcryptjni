@@ -70,6 +70,31 @@ jobs:
             exit 1
           fi
 
+      - name: Verify EdDSA multi-release overlay layout
+        run: |
+          MR=$(unzip -p lib/wolfcrypt-jni.jar META-INF/MANIFEST.MF | tr -d '\r' | grep -c '^Multi-Release: true' || true)
+          OVERLAY=$(jar tf lib/wolfcrypt-jni.jar | grep -c 'META-INF/versions/15/com/wolfssl/provider/jce/WolfCryptEdDSA' || true)
+          echo "Multi-Release manifest entries: $MR, overlay classes: $OVERLAY"
+          JAVA_MAJOR=${{ matrix.jdk_version }}
+          if [ "$JAVA_MAJOR" -ge 15 ]; then
+            if [ "$MR" -ne 1 ] || [ "$OVERLAY" -lt 3 ]; then
+              echo "FAILURE: JDK $JAVA_MAJOR build must contain the META-INF/versions/15 EdDSA overlay"
+              exit 1
+            fi
+            if [ "$JAVA_MAJOR" -ge 17 ]; then
+              # jar --validate exists from JDK 17
+              echo "Validating multi-release JAR structure (jar --validate)..."
+              jar --validate --file lib/wolfcrypt-jni.jar
+            fi
+            echo "SUCCESS: JDK 15+ EdDSA overlay present"
+          else
+            if [ "$MR" -ne 0 ] || [ "$OVERLAY" -ne 0 ]; then
+              echo "FAILURE: JDK $JAVA_MAJOR build must not be marked Multi-Release or contain the versions/15 overlay"
+              exit 1
+            fi
+            echo "SUCCESS: no overlay on JDK $JAVA_MAJOR (base classes only)"
+          fi
+
       - name: Verify module descriptor with jar --describe-module
         run: |
           echo "Describing module in wolfcrypt-jni.jar..."
@@ -155,6 +180,21 @@ jobs:
           echo ""
           echo "Verifying Maven JAR module descriptor..."
           jar --describe-module --file="$MAVEN_JAR"
+          echo ""
+          echo "Verifying Maven JAR EdDSA multi-release overlay layout..."
+          MR=$(unzip -p "$MAVEN_JAR" META-INF/MANIFEST.MF | tr -d '\r' | grep -c '^Multi-Release: true' || true)
+          OVERLAY=$(jar tf "$MAVEN_JAR" | grep -c 'META-INF/versions/15/com/wolfssl/provider/jce/WolfCryptEdDSA' || true)
+          JAVA_MAJOR=${{ matrix.jdk_version }}
+          if [ "$JAVA_MAJOR" -ge 15 ]; then
+            if [ "$MR" -ne 1 ] || [ "$OVERLAY" -lt 3 ]; then
+              echo "FAILURE: Maven JDK $JAVA_MAJOR build must contain the META-INF/versions/15 EdDSA overlay"
+              exit 1
+            fi
+          elif [ "$MR" -ne 0 ] || [ "$OVERLAY" -ne 0 ]; then
+            echo "FAILURE: Maven JDK $JAVA_MAJOR build must not be marked Multi-Release or contain the overlay"
+            exit 1
+          fi
+          echo "SUCCESS: Maven JAR overlay layout matches JDK $JAVA_MAJOR"
 
       - name: Clean Maven build
         run: mvn clean -q
@@ -212,6 +252,16 @@ jobs:
           else
             echo "SUCCESS: module-info.class correctly absent from Java 8 JAR"
           fi
+
+      - name: Verify no multi-release overlay in JAR (Java 8)
+        run: |
+          MR=$(unzip -p lib/wolfcrypt-jni.jar META-INF/MANIFEST.MF | tr -d '\r' | grep -c '^Multi-Release: true' || true)
+          OVERLAY=$(jar tf lib/wolfcrypt-jni.jar | grep -c 'META-INF/versions/15/' || true)
+          if [ "$MR" -ne 0 ] || [ "$OVERLAY" -ne 0 ]; then
+            echo "FAILURE: Java 8 build must not be marked Multi-Release or contain the versions/15 overlay"
+            exit 1
+          fi
+          echo "SUCCESS: no multi-release overlay in Java 8 JAR"
 
       - name: Run standard tests to verify Java 8 compatibility
         run: ant test

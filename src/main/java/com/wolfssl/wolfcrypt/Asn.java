@@ -49,6 +49,10 @@ public class Asn extends WolfObject {
     public static final int RSAESOAEPk;
     /** ECDSA key value, from asn.h Key_Sum enum */
     public static final int ECDSAk;
+    /** Ed25519 key value, from oid_sum.h Key_Sum enum. OID 1.3.101.112. */
+    public static final int ED25519k;
+    /** Ed448 key value, from oid_sum.h Key_Sum enum. OID 1.3.101.113. */
+    public static final int ED448k;
     /** ML-DSA-44 (FIPS 204) key value, from oid_sum.h Key_Sum enum.
      * OID 2.16.840.1.101.3.4.3.17. */
     public static final int ML_DSA_LEVEL2k;
@@ -124,6 +128,8 @@ public class Asn extends WolfObject {
         RSAPSSk = getRSAPSSk();
         RSAESOAEPk = getRSAESOAEPk();
         ECDSAk = getECDSAk();
+        ED25519k = getED25519k();
+        ED448k = getED448k();
         ML_DSA_LEVEL2k = getML_DSA_LEVEL2k();
         ML_DSA_LEVEL3k = getML_DSA_LEVEL3k();
         ML_DSA_LEVEL5k = getML_DSA_LEVEL5k();
@@ -166,6 +172,12 @@ public class Asn extends WolfObject {
 
     /** Return value of native ECDSAk enum */
     private static native int getECDSAk();
+
+    /** Return value of native ED25519k enum */
+    private static native int getED25519k();
+
+    /** Return value of native ED448k enum */
+    private static native int getED448k();
 
     /** Return value of native ML_DSA_LEVEL2k enum */
     private static native int getML_DSA_LEVEL2k();
@@ -285,5 +297,26 @@ public class Asn extends WolfObject {
      * @throws WolfCryptException upon native error
      */
     public static native int getPkcs8AlgoID(byte[] pkcs8Der);
+
+    /**
+     * Get the offset of the traditional private key inside a DER-encoded
+     * PKCS#8 PrivateKeyInfo / OneAsymmetricKey. Input array is not
+     * modified.
+     *
+     * For RSA and ECC keys the located key is the traditional RSAPrivateKey /
+     * ECPrivateKey SEQUENCE. For Ed25519 / Ed448 keys it is the RFC 8410
+     * CurvePrivateKey, an OCTET STRING holding the raw private key.
+     *
+     * @param pkcs8Der DER-encoded PKCS#8 private key
+     *
+     * @return two-element array: [0] offset of the traditional key within
+     *         pkcs8Der, [1] its length in bytes
+     *
+     * @throws WolfCryptException if pkcs8Der is null or empty, on native
+     *         error, if the input is not a PKCS#8 encoding native wolfSSL
+     *         can parse, or if PKCS#8 support is not compiled into native
+     *         wolfSSL
+     */
+    public static native int[] getPkcs8TraditionalOffset(byte[] pkcs8Der);
 }
 

@@ -51,6 +51,22 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getECDSAk
 
 /*
  * Class:     com_wolfssl_wolfcrypt_Asn
+ * Method:    getED25519k
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getED25519k
+  (JNIEnv *, jclass);
+
+/*
+ * Class:     com_wolfssl_wolfcrypt_Asn
+ * Method:    getED448k
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getED448k
+  (JNIEnv *, jclass);
+
+/*
+ * Class:     com_wolfssl_wolfcrypt_Asn
  * Method:    getML_DSA_LEVEL2k
  * Signature: ()I
  */
@@ -279,6 +295,14 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getCTC_1HashOID
  * Signature: ([B)I
  */
 JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getPkcs8AlgoID
+  (JNIEnv *, jclass, jbyteArray);
+
+/*
+ * Class:     com_wolfssl_wolfcrypt_Asn
+ * Method:    getPkcs8TraditionalOffset
+ * Signature: ([B)[I
+ */
+JNIEXPORT jintArray JNICALL Java_com_wolfssl_wolfcrypt_Asn_getPkcs8TraditionalOffset
   (JNIEnv *, jclass, jbyteArray);
 
 #ifdef __cplusplus

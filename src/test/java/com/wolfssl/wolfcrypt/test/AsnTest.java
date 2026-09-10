@@ -24,11 +24,18 @@ package com.wolfssl.wolfcrypt.test;
 import static org.junit.Assert.*;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Base64;
 
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.BeforeClass;
 
 import com.wolfssl.wolfcrypt.Asn;
+import com.wolfssl.wolfcrypt.Ed25519;
+import com.wolfssl.wolfcrypt.FeatureDetect;
+import com.wolfssl.wolfcrypt.Rng;
+import com.wolfssl.wolfcrypt.WolfCryptError;
 import com.wolfssl.wolfcrypt.WolfCryptException;
 
 /**
@@ -66,6 +73,10 @@ public class AsnTest {
         assertNotEquals("SHA3_256h should not be zero", 0, Asn.SHA3_256h);
         assertNotEquals("SHA3_384h should not be zero", 0, Asn.SHA3_384h);
         assertNotEquals("SHA3_512h should not be zero", 0, Asn.SHA3_512h);
+        assertNotEquals("ED25519k should not be zero", 0, Asn.ED25519k);
+        assertNotEquals("ED448k should not be zero", 0, Asn.ED448k);
+        assertNotEquals("ED25519k and ED448k must differ", Asn.ED25519k,
+            Asn.ED448k);
     }
 
     @Test
@@ -189,6 +200,125 @@ public class AsnTest {
                 assertNotEquals("OID values should be unique", oids[i],
                                 oids[j]);
             }
+        }
+    }
+
+    /* RFC 8410 section 10.3 example: Ed25519 OneAsymmetricKey v2 with an
+     * attributes [0] element and a publicKey [1] element following the
+     * CurvePrivateKey */
+    private static final String RFC8410_V2_EXAMPLE =
+        "MHICAQEwBQYDK2VwBCIEINTuctv5E1hK1bbY8fdp+K06/nwoy/HU++CXqI9EdVhC" +
+        "oB8wHQYKKoZIhvcNAQkJFDEPDA1DdXJkbGUgQ2hhaXJzgSEAGb9ECWmEzf6FQbrB" +
+        "Z9w7lshQhqowtrbLDFw4rXAxZuE=";
+
+    /* private key octets from the RFC 8410 section 10.3 example */
+    private static final byte[] RFC8410_PRIV = Util.h2b(
+        "D4EE72DBF913584AD5B6D8F1F769F8AD3AFE7C28CBF1D4FBE097A88F44755842");
+
+    /* Skip when native wolfSSL was built without PKCS#8 support */
+    private static void assumePkcs8(byte[] der) {
+        try {
+            Asn.getPkcs8AlgoID(der);
+        } catch (WolfCryptException e) {
+            Assume.assumeTrue("PKCS#8 not compiled in",
+                e.getError() != WolfCryptError.NOT_COMPILED_IN);
+        }
+    }
+
+    @Test
+    public void testGetPkcs8TraditionalOffsetRfc8410Example() {
+
+        Assume.assumeTrue("Ed25519 not compiled in",
+            FeatureDetect.Ed25519Enabled());
+
+        byte[] der = Base64.getDecoder().decode(RFC8410_V2_EXAMPLE);
+        assumePkcs8(der);
+
+        int[] tk = Asn.getPkcs8TraditionalOffset(der);
+        assertEquals(2, tk.length);
+        /* SEQUENCE(2) + version(3) + AlgorithmIdentifier(7) + OCTET STRING
+         * header(2) puts the CurvePrivateKey at offset 14. It is the 34-byte
+         * OCTET STRING { 32-byte private key } regardless of attributes and
+         * public key that follow it */
+        assertEquals(14, tk[0]);
+        assertEquals(34, tk[1]);
+        assertEquals(0x04, der[tk[0]]);
+        assertEquals(0x20, der[tk[0] + 1]);
+        assertArrayEquals(RFC8410_PRIV,
+            Arrays.copyOfRange(der, tk[0] + 2, tk[0] + tk[1]));
+        /* input must not have been modified */
+        assertArrayEquals(Base64.getDecoder().decode(RFC8410_V2_EXAMPLE), der);
+    }
+
+    @Test
+    public void testGetPkcs8TraditionalOffsetV1() throws Exception {
+
+        Assume.assumeTrue("Ed25519 not compiled in",
+            FeatureDetect.Ed25519Enabled());
+
+        Rng rng = new Rng();
+        Ed25519 key = new Ed25519();
+        byte[] der;
+        byte[] rawPriv;
+
+        try {
+            rng.init();
+            key.makeKey(rng);
+            der = key.exportPrivateKeyDer();
+            rawPriv = key.exportPrivateOnly();
+        } finally {
+            key.releaseNativeStruct();
+            rng.releaseNativeStruct();
+        }
+        assumePkcs8(der);
+
+        int[] tk = Asn.getPkcs8TraditionalOffset(der);
+        assertEquals(14, tk[0]);
+        assertEquals(34, tk[1]);
+        assertEquals(0x04, der[tk[0]]);
+        assertEquals(0x20, der[tk[0] + 1]);
+        assertArrayEquals(rawPriv,
+            Arrays.copyOfRange(der, tk[0] + 2, tk[0] + tk[1]));
+    }
+
+    @Test
+    public void testGetPkcs8TraditionalOffsetBadInput() {
+
+        byte[] der = Base64.getDecoder().decode(RFC8410_V2_EXAMPLE);
+        assumePkcs8(der);
+
+        try {
+            Asn.getPkcs8TraditionalOffset(null);
+            fail("null input accepted");
+        } catch (WolfCryptException e) {
+            /* expected */
+        }
+        try {
+            Asn.getPkcs8TraditionalOffset(new byte[0]);
+            fail("empty input accepted");
+        } catch (WolfCryptException e) {
+            /* expected */
+        }
+        try {
+            Asn.getPkcs8TraditionalOffset(new byte[] { 0x01, 0x02, 0x03 });
+            fail("garbage input accepted");
+        } catch (WolfCryptException e) {
+            /* expected */
+        }
+        /* truncated PKCS#8 */
+        try {
+            Asn.getPkcs8TraditionalOffset(Arrays.copyOf(der, 20));
+            fail("truncated input accepted");
+        } catch (WolfCryptException e) {
+            /* expected */
+        }
+        /* well formed envelope with an empty privateKey OCTET STRING */
+        try {
+            Asn.getPkcs8TraditionalOffset(Util.h2b(
+                "300d020100300506032b65700400"));
+            fail("empty private key accepted");
+        } catch (WolfCryptException e) {
+            /* expected */
         }
     }
 }

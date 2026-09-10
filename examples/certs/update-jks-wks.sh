@@ -293,3 +293,38 @@ else
     fi
     rm -f BuildMlDsaKeystores.class
 fi
+
+#################### EdDSA WKS KEYSTORES ####################
+# Build EdDSA (Ed25519 / Ed448) WKS keystores from ed25519/ and ed448/
+# cert/key files. Uses wolfJCE directly, so does not need keytool EdDSA support
+# (JDK 15+) or openssl. Ed448 keystores are only rebuilt when native wolfSSL
+# has Ed448 compiled in.
+printf "\nBuilding EdDSA WKS keystores via wolfJCE helper ...\n"
+if [ ! -f "$JAR" ]; then
+    printf "\tSkipping: %s not found\n" "$JAR"
+    printf "\t(Run 'ant build-jce-debug' first.)\n"
+else
+    rm -f BuildEdDSAKeystores.class
+    javac -cp "$JAR" BuildEdDSAKeystores.java
+    if [ $? -ne 0 ]; then
+        printf "\tFailed to compile BuildEdDSAKeystores.java\n"
+        exit 1
+    fi
+    # Probe for wolfJCE EdDSA support before regenerating. Unlike ML-DSA
+    # the existing .wks files are not removed first, so a build with one
+    # curve leaves the other curve's prebuilt keystores intact
+    java -cp "$JAR:." \
+        -Djava.library.path=../../lib BuildEdDSAKeystores --check
+    if [ $? -ne 0 ]; then
+        printf "\tSkipping: native wolfSSL lacks EdDSA support,\n"
+        printf "\tleaving prebuilt EdDSA keystores in place\n"
+    else
+        java -cp "$JAR:." \
+            -Djava.library.path=../../lib BuildEdDSAKeystores
+        if [ $? -ne 0 ]; then
+            printf "\tBuildEdDSAKeystores failed\n"
+            exit 1
+        fi
+    fi
+    rm -f BuildEdDSAKeystores.class
+fi

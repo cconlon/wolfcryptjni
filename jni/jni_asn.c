@@ -39,31 +39,57 @@
 JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getDSAk
   (JNIEnv* env, jclass class)
 {
+    (void)env;
+    (void)class;
     return DSAk;
 }
 
 JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getRSAk
   (JNIEnv* env, jclass class)
 {
+    (void)env;
+    (void)class;
     return RSAk;
 }
 
 JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getRSAPSSk
   (JNIEnv* env, jclass class)
 {
+    (void)env;
+    (void)class;
     return RSAPSSk;
 }
 
 JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getRSAESOAEPk
   (JNIEnv* env, jclass class)
 {
+    (void)env;
+    (void)class;
     return RSAESOAEPk;
 }
 
 JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getECDSAk
   (JNIEnv* env, jclass class)
 {
+    (void)env;
+    (void)class;
     return ECDSAk;
+}
+
+JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getED25519k
+  (JNIEnv* env, jclass class)
+{
+    (void)env;
+    (void)class;
+    return ED25519k;
+}
+
+JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getED448k
+  (JNIEnv* env, jclass class)
+{
+    (void)env;
+    (void)class;
+    return ED448k;
 }
 
 /* ML-DSA Key_Sum enum values:
@@ -287,6 +313,7 @@ JNIEXPORT void JNICALL Java_com_wolfssl_wolfcrypt_Asn_encodeSignature__Ljava_nio
 {
     byte* encoded = getDirectBufferAddress(env, encoded_object);
     byte* hash = getDirectBufferAddress(env, hash_object);
+    (void)class;
 
     /* Validate hashSize against hash buffer, and that the output buffer is
      * large enough to hold DER encoded digest */
@@ -309,6 +336,7 @@ JNIEXPORT jlong JNICALL Java_com_wolfssl_wolfcrypt_Asn_encodeSignature___3B_3BJI
     byte* encoded = getByteArray(env, encoded_object);
     byte* hash = getByteArray(env, hash_object);
     jlong ret = 0;
+    (void)class;
 
     /* Validate hashSize against hash array, and that the output array is
      * large enough to hold DER encoded digest */
@@ -331,6 +359,8 @@ JNIEXPORT jlong JNICALL Java_com_wolfssl_wolfcrypt_Asn_encodeSignature___3B_3BJI
 JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getCTC_1HashOID(
     JNIEnv* env, jclass class, jint type)
 {
+    (void)env;
+    (void)class;
     return wc_GetCTC_HashOID(type);
 }
 
@@ -343,6 +373,8 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getPkcs8AlgoID
     byte* p8 = NULL;
     byte* p8Copy = NULL;
     word32 p8Len = 0;
+
+    (void)class;
 
     if (pkcs8Der != NULL) {
         p8 = (byte*)(*env)->GetByteArrayElements(env, pkcs8Der, NULL);
@@ -401,6 +433,67 @@ JNIEXPORT jint JNICALL Java_com_wolfssl_wolfcrypt_Asn_getPkcs8AlgoID
     (void)pkcs8Der;
     throwNotCompiledInException(env);
     return 0;
+#endif
+}
+
+JNIEXPORT jintArray JNICALL Java_com_wolfssl_wolfcrypt_Asn_getPkcs8TraditionalOffset
+  (JNIEnv* env, jclass class, jbyteArray pkcs8Der)
+{
+#if !defined(NO_ASN) && defined(HAVE_PKCS8) && !defined(NO_CERTS)
+    int ret = 0;
+    word32 idx = 0;
+    byte* p8 = NULL;
+    word32 p8Len = 0;
+    jint result[2];
+    jintArray out = NULL;
+
+    (void)class;
+
+    if (pkcs8Der != NULL) {
+        p8 = (byte*)(*env)->GetByteArrayElements(env, pkcs8Der, NULL);
+        p8Len = (*env)->GetArrayLength(env, pkcs8Der);
+    }
+
+    if (p8 == NULL || p8Len == 0) {
+        ret = BAD_FUNC_ARG;
+    }
+
+    if (ret == 0) {
+        /* wc_GetPkcs8TraditionalOffset() only reads the input, the
+         * traditional key is located in place and not moved */
+        ret = wc_GetPkcs8TraditionalOffset(p8, &idx, p8Len);
+        if (ret >= 0 && (ret == 0 || idx > p8Len ||
+                (word32)ret > p8Len - idx)) {
+            /* reject empty key or one that does not lie inside input */
+            ret = ASN_PARSE_E;
+        }
+    }
+
+    if (p8 != NULL) {
+        (*env)->ReleaseByteArrayElements(env, pkcs8Der, (jbyte*)p8, JNI_ABORT);
+    }
+
+    if (ret >= 0) {
+        result[0] = (jint)idx;
+        result[1] = (jint)ret;
+        /* NewIntArray leaves an OutOfMemoryError pending on failure */
+        out = (*env)->NewIntArray(env, 2);
+        if (out != NULL) {
+            (*env)->SetIntArrayRegion(env, out, 0, 2, result);
+        }
+    }
+    else {
+        throwWolfCryptExceptionFromError(env, ret);
+    }
+
+    return out;
+
+#else
+    (void)env;
+    (void)class;
+    (void)pkcs8Der;
+    throwNotCompiledInException(env);
+    return NULL;
 #endif
 }
 
