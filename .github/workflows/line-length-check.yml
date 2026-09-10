@@ -68,8 +68,10 @@ jobs:
 
             # Skip certificate/key files. These carry encoded key material
             # and OpenSSL text dumps (long Issuer/Subject lines) that cannot
-            # be wrapped
-            if [[ "$file" =~ \.(pem|der)$ ]]; then
+            # be wrapped. Skip the whole certs tree since some files there
+            # (CRLs and similar) do not use a .pem or .der extension.
+            if [[ "$file" =~ ^examples/certs/ ]] || \
+               [[ "$file" =~ \.(pem|der)$ ]]; then
               echo "Skipping $file (certificate/key file)"
               continue
             fi
