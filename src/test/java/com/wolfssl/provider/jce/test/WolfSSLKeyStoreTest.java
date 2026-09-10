@@ -2104,6 +2104,10 @@ public class WolfSSLKeyStoreTest {
         WolfCryptProvider prov = null;
         KeyStore store = null;
 
+        /* The Android platform PKCS12 provider cannot read the PBES2/PBKDF2
+         * client.p12, matching testLoadWKSasJKSFromFile which also skips. */
+        Assume.assumeTrue(!isAndroid());
+
         /* Use client.wks (clientWKS) to test. Any WKS KeyStore could be used,
          * this was just picked since was first used/tested in test above. */
 
